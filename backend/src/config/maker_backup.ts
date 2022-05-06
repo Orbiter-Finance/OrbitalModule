@@ -212,7 +212,7 @@ export default {
     wsEndPoint: 'wss://ws.mainnet.boba.network',
     httpEndPoint: 'https://mainnet.boba.network',
     api: {
-      endPoint: 'https://blockexplorer.boba.network/api',
+      endPoint: 'https://blockexplorer.boba.network/graphiql',
       key: '',
     },
     gasPrice: 2,
