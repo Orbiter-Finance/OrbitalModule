@@ -26,15 +26,9 @@ export default class OptimisticWS {
   static txList: Map<Address, Array<Transaction>> = new Map()
   static web3: AlchemyWeb3
   constructor(addressList: Array<Address>, ws: string) {
-    ws = 'wss://opt-mainnet.g.alchemy.com/v2/IWGLcdSJjLh7yGwJnY8yBRnQ7cVdRPCN'
     for (const address of addressList) {
-      //
       OptimisticWS.txList.set(address.toLowerCase(), [])
     }
-    OptimisticWS.txList.set(
-      '0x80C67432656d59144cEFf962E8fAF8926599bCF8'.toLowerCase(),
-      []
-    )
     if (!OptimisticWS.web3) {
       OptimisticWS.web3 = createAlchemyWeb3(ws)
     }

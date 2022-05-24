@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { accessLogger, errorLogger } from '../../util/logger';
-import OptimisticWS from './ws';
+import { accessLogger, errorLogger } from '../../util/logger'
+import OptimisticWS from './ws'
 
 type Api = { endPoint: string; key: string }
 type Transaction = {
@@ -99,8 +99,10 @@ export class OpListen {
           isFirstTicker = false
         }
         // get op ws data
-        const result:Array<any> = await OptimisticWS.txList.get(this.address.toLowerCase())?.filter(tx=> tx.blockNumber>startblock) || [];
-        console.log(result, '=========')
+        const result: Array<any> =
+          (await OptimisticWS.txList
+            .get(this.address.toLowerCase())
+            ?.filter((tx) => tx.blockNumber > startblock)) || []
         for (const item of result) {
           if (!checkFilter(item.from, item.to)) {
             continue
