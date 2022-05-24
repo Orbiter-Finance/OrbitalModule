@@ -107,4 +107,8 @@ export default class OptimisticWS {
         }
       })
   }
+  
+  scanTransactionBlock(start:number,end:number) {
+
+  }
 }
