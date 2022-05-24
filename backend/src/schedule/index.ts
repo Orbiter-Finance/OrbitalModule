@@ -2,7 +2,7 @@ import { appConfig, makerConfig } from '../config'
 import { sleep } from '../util'
 import { accessLogger, errorLogger } from '../util/logger'
 import { getMakerList, startMaker } from '../util/maker'
-import {groupBy} from 'lodash'
+import { groupBy } from 'lodash'
 import {
   jobBalanceAlarm,
   jobCacheCoinbase,
@@ -15,18 +15,31 @@ import OptimisticWS from '../service/optimistic/ws'
 
 let smsTimeStamp = 0
 
+async function injectionOpPatch(makerList: Array<any>) {
+  const opIds = [7, 77]
+  const optimisticMarketList = makerList.filter(
+    (row) => opIds.includes(row.c1ID) || opIds.includes(row.c2ID)
+  )
+  if (optimisticMarketList.length > 0) {
+    const opMakerAddress = groupBy(optimisticMarketList, 'makerAddress')
+    const isTestEnv = optimisticMarketList.find(
+      (row) =>
+        row.c1Name.includes('optimism_test') ||
+        row.c2Name.includes('optimism_test')
+    )
+    new OptimisticWS(
+      Object.keys(opMakerAddress),
+      isTestEnv
+        ? makerConfig.optimism_test.wsEndPoint
+        : makerConfig.optimism.wsEndPoint
+    ).run()
+  }
+}
 async function waittingStartMaker() {
   const makerList = await getMakerList()
   // optimistic patch
-  const optimisticMarketList = makerList.filter(
-    (row) => row.c1ID === 77 || row.c2ID === 77
-  )
-  if (optimisticMarketList.length > 0) {
-    const opMakerAddress = groupBy(optimisticMarketList, 'makerAddress');
-    console.log('===opMakerAddressList',Object.keys(opMakerAddress))
-    new OptimisticWS(Object.keys(opMakerAddress)).run()
+  injectionOpPatch(makerList)
 
-  }
   if (makerList.length === 0) {
     accessLogger.warn('none maker list')
     return
