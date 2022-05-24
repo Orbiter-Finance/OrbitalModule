@@ -102,7 +102,7 @@ export class OpListen {
         const result: Array<any> =
           (await OptimisticWS.txList
             .get(this.address.toLowerCase())
-            ?.filter((tx) => tx.blockNumber > startblock)) || []
+            ?.filter((tx) => Number(tx.blockNumber) > Number(startblock))) || []
         for (const item of result) {
           if (!checkFilter(item.from, item.to)) {
             continue

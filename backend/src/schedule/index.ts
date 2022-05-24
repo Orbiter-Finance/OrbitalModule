@@ -10,35 +10,18 @@ import {
   // jobMakerNodeTodo,
   jobMakerPull,
 } from './jobs'
-import OptimisticWS from '../service/optimistic/ws'
+import OptimisticWS, { getOpMakertList } from '../service/optimistic/ws'
 // import { doSms } from '../sms/smsSchinese'
 
 let smsTimeStamp = 0
 
-async function injectionOpPatch(makerList: Array<any>) {
-  const opIds = [7, 77]
-  const optimisticMarketList = makerList.filter(
-    (row) => opIds.includes(row.c1ID) || opIds.includes(row.c2ID)
-  )
-  if (optimisticMarketList.length > 0) {
-    const opMakerAddress = groupBy(optimisticMarketList, 'makerAddress')
-    const isTestEnv = optimisticMarketList.find(
-      (row) =>
-        row.c1Name.includes('optimism_test') ||
-        row.c2Name.includes('optimism_test')
-    )
-    new OptimisticWS(
-      Object.keys(opMakerAddress),
-      isTestEnv
-        ? makerConfig.optimism_test.wsEndPoint
-        : makerConfig.optimism.wsEndPoint
-    ).run()
-  }
-}
 async function waittingStartMaker() {
   const makerList = await getMakerList()
   // optimistic patch
-  injectionOpPatch(makerList)
+  const result = getOpMakertList(makerList)
+  if (result && result.makerAddress.length > 0) {
+    new OptimisticWS(result.makerAddress, result.ws).makerScan()
+  }
 
   if (makerList.length === 0) {
     accessLogger.warn('none maker list')

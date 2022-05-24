@@ -17,6 +17,7 @@ import { IMXHelper } from './immutablex/imx_helper'
 import { getAmountFlag, getTargetMakerPool, makeTransactionID } from './maker'
 import { getMakerPullStart } from './setting'
 import BobaService from './boba/boba_service'
+import OptimisticWS from './optimistic/ws'
 const repositoryMakerNode = (): Repository<MakerNode> => {
   return Core.db.getRepository(MakerNode)
 }
@@ -190,7 +191,7 @@ export function getLastStatus() {
     LOOPRING_LAST,
     DYDX_LAST,
     ZKSPACE_LAST,
-    BOBA_LAST
+    BOBA_LAST,
   }
 }
 
@@ -892,36 +893,13 @@ export class ServiceMakerPull {
     let lastMakePull = await this.getLastMakerPull(makerPullLastData)
 
     // when endblock is empty, will end latest
-    const startblock = ''
-    const endblock = lastMakePull ? lastMakePull.txBlock : ''
-
-    const resp = await axios.get(api.endPoint, {
-      params: {
-        // apiKey: api.key,
-        module: 'account',
-        action: isEthTokenAddress(this.tokenAddress) ? 'txlist' : 'tokentx',
-        address: this.makerAddress,
-        page: 1,
-        offset: 100,
-        startblock,
-        endblock,
-        sort: 'desc',
-      },
-      timeout: SERVICE_MAKER_PULL_TIMEOUT,
-    })
-
-    // check data
-    const { data } = resp
-    if (data.status != '1' || !data.result || data.result.length <= 0) {
-      accessLogger.warn(
-        'Get optimistc tokentx/txlist faild: ' + JSON.stringify(data)
-      )
-      return
-    }
-
+    // const startblock = ''
+    // const endblock = lastMakePull ? lastMakePull.txBlock : ''
+    const txList = OptimisticWS.txList.get(
+      String(this.makerAddress).toLowerCase()
+    )
     const promiseMethods: (() => Promise<unknown>)[] = []
-    for (const item of data.result) {
-      // contractAddress = 0x0...0
+    txList?.forEach(async (item, index) => {
       let contractAddress = item.contractAddress
       if (isEthTokenAddress(this.tokenAddress) && !item.contractAddress) {
         contractAddress = this.tokenAddress
@@ -929,7 +907,7 @@ export class ServiceMakerPull {
 
       // checks
       if (!equalsIgnoreCase(contractAddress, this.tokenAddress)) {
-        continue
+        return
       }
 
       const amount_flag = getAmountFlag(this.chainId, item.value)
@@ -956,13 +934,13 @@ export class ServiceMakerPull {
         txBlock: item.blockNumber,
         txHash: item.hash,
         txExt: this.getTxExtFromInput(item.input),
-        txTime: new Date(item.timeStamp * 1000),
+        txTime: new Date(Number(item.timeStamp) * 1000),
         gasCurrency: 'ETH',
         gasAmount: new BigNumber(item.gasUsed)
           .multipliedBy(item.gasPrice)
           .toString(),
         tx_status:
-          item.confirmations >= FINALIZED_CONFIRMATIONS
+          Number(item.confirmations) >= FINALIZED_CONFIRMATIONS
             ? 'finalized'
             : 'committed',
       })
@@ -973,16 +951,99 @@ export class ServiceMakerPull {
         // compare
         await this.singleCompareData(makerPull)
       })
-    }
 
-    await this.doPromisePool(promiseMethods)
+      await this.doPromisePool(promiseMethods).then(() => {
+        txList.splice(index, 1)
+      })
+    })
+    // const resp = await axios.get(api.endPoint, {
+    //   params: {
+    //     // apiKey: api.key,
+    //     module: 'account',
+    //     action: isEthTokenAddress(this.tokenAddress) ? 'txlist' : 'tokentx',
+    //     address: this.makerAddress,
+    //     page: 1,
+    //     offset: 100,
+    //     startblock,
+    //     endblock,
+    //     sort: 'desc',
+    //   },
+    //   timeout: SERVICE_MAKER_PULL_TIMEOUT,
+    // })
 
-    // set OPTIMISM_LAST
-    if (lastMakePull?.txBlock == makerPullLastData.makerPull?.txBlock) {
-      makerPullLastData.pullCount++
-    }
-    makerPullLastData.makerPull = lastMakePull
-    OPTIMISM_LAST[makerPullLastKey] = makerPullLastData
+    // // check data
+    // const { data } = resp
+    // if (data.status != '1' || !data.result || data.result.length <= 0) {
+    //   accessLogger.warn(
+    //     'Get optimistc tokentx/txlist faild: ' + JSON.stringify(data)
+    //   )
+    //   return
+    // }
+
+    // const promiseMethods: (() => Promise<unknown>)[] = []
+    // for (const item of data.result) {
+    //   // contractAddress = 0x0...0
+    //   let contractAddress = item.contractAddress
+    //   if (isEthTokenAddress(this.tokenAddress) && !item.contractAddress) {
+    //     contractAddress = this.tokenAddress
+    //   }
+
+    //   // checks
+    //   if (!equalsIgnoreCase(contractAddress, this.tokenAddress)) {
+    //     continue
+    //   }
+
+    //   const amount_flag = getAmountFlag(this.chainId, item.value)
+
+    //   // ensureTransactionInput
+    //   if (
+    //     equalsIgnoreCase(item.to, this.makerAddress) &&
+    //     (amount_flag == '11' || amount_flag == '511')
+    //   ) {
+    //     await this.ensureTransactionInput(item, api)
+    //   }
+
+    //   // save
+    //   const makerPull = (lastMakePull = <MakerPull>{
+    //     chainId: this.chainId,
+    //     makerAddress: this.makerAddress,
+    //     tokenAddress: contractAddress,
+    //     data: JSON.stringify(item),
+    //     amount: item.value,
+    //     amount_flag,
+    //     nonce: item.nonce,
+    //     fromAddress: item.from,
+    //     toAddress: item.to,
+    //     txBlock: item.blockNumber,
+    //     txHash: item.hash,
+    //     txExt: this.getTxExtFromInput(item.input),
+    //     txTime: new Date(item.timeStamp * 1000),
+    //     gasCurrency: 'ETH',
+    //     gasAmount: new BigNumber(item.gasUsed)
+    //       .multipliedBy(item.gasPrice)
+    //       .toString(),
+    //     tx_status:
+    //       item.confirmations >= FINALIZED_CONFIRMATIONS
+    //         ? 'finalized'
+    //         : 'committed',
+    //   })
+
+    //   promiseMethods.push(async () => {
+    //     await savePull(makerPull)
+
+    //     // compare
+    //     await this.singleCompareData(makerPull)
+    //   })
+    // }
+
+    // await this.doPromisePool(promiseMethods)
+
+    // // set OPTIMISM_LAST
+    // if (lastMakePull?.txBlock == makerPullLastData.makerPull?.txBlock) {
+    //   makerPullLastData.pullCount++
+    // }
+    // makerPullLastData.makerPull = lastMakePull
+    // OPTIMISM_LAST[makerPullLastKey] = makerPullLastData
   }
 
   /**

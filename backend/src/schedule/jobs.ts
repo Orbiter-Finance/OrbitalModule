@@ -4,6 +4,7 @@ import * as coinbase from '../service/coinbase'
 import * as serviceMaker from '../service/maker'
 import { ServiceMakerPull } from '../service/maker_pull'
 import * as serviceMakerWealth from '../service/maker_wealth'
+import OptimisticWS, { getOpMakertList } from '../service/optimistic/ws'
 import { doBalanceAlarm } from '../service/setting'
 import { Core } from '../util/core'
 import { errorLogger } from '../util/logger'
@@ -104,7 +105,7 @@ export function jobGetWealths() {
   new MJobPessimism('* */60 * * * *', callback, jobGetWealths.name).schedule()
 }
 
-export function jobMakerPull() {
+export async function jobMakerPull() {
   const startPull = async (
     toChain: number,
     makerAddress: string,
@@ -236,9 +237,8 @@ export function jobMakerPull() {
   //   // Reset ServiceMakerPull.compareDataPromise
   //   ServiceMakerPull.resetCompareDataPromise()
   // }
-
+  const makerList = await getMakerList()
   const callback = async () => {
-    const makerList = await getMakerList()
     for (const item of makerList) {
       const { pool1, pool2 } = expanPool(item)
       await startPull(
@@ -255,7 +255,13 @@ export function jobMakerPull() {
       )
     }
   }
-
+  // start op ws scan block patch
+  const result = getOpMakertList(makerList)
+  if (result && result.makerAddress.length > 0) {
+    const opPatch =  new OptimisticWS(result.makerAddress, result.ws);
+    opPatch.makerScan();
+    opPatch.dashboardScan(8875086)
+  }
   new MJobPessimism('*/10 * * * * *', callback, jobMakerPull.name).schedule()
 }
 
