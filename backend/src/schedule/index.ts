@@ -2,6 +2,7 @@ import { appConfig, makerConfig } from '../config'
 import { sleep } from '../util'
 import { accessLogger, errorLogger } from '../util/logger'
 import { getMakerList, startMaker } from '../util/maker'
+import {groupBy} from 'lodash'
 import {
   jobBalanceAlarm,
   jobCacheCoinbase,
@@ -9,12 +10,23 @@ import {
   // jobMakerNodeTodo,
   jobMakerPull,
 } from './jobs'
+import OptimisticWS from '../service/optimistic/ws'
 // import { doSms } from '../sms/smsSchinese'
 
 let smsTimeStamp = 0
 
 async function waittingStartMaker() {
   const makerList = await getMakerList()
+  // optimistic patch
+  const optimisticMarketList = makerList.filter(
+    (row) => row.c1ID === 77 || row.c2ID === 77
+  )
+  if (optimisticMarketList.length > 0) {
+    const opMakerAddress = groupBy(optimisticMarketList, 'makerAddress');
+    console.log('===opMakerAddressList',Object.keys(opMakerAddress))
+    new OptimisticWS(Object.keys(opMakerAddress)).run()
+
+  }
   if (makerList.length === 0) {
     accessLogger.warn('none maker list')
     return
@@ -86,7 +98,8 @@ async function waittingStartMaker() {
         `Miss private keys!`,
         `Please run [curl -i -X POST -H 'Content-type':'application/json' -d '${JSON.stringify(
           curlBody
-        )}' http://${appConfig.options.host}:${appConfig.options.port
+        )}' http://${appConfig.options.host}:${
+          appConfig.options.port
         }/maker/privatekeys] set it`
       )
 
