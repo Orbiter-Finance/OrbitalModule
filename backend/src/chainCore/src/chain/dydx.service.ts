@@ -50,7 +50,7 @@ export class Dydx implements IChain {
         return localToken
       }
     }
-    return null;
+    return null
   }
   public getDydxClient() {
     const apiKeyCredentials = this.apiKeyCredentials
@@ -75,7 +75,43 @@ export class Dydx implements IChain {
   async getLatestHeight(): Promise<number> {
     return 0
   }
-
+  public async convertTxToEntity(data: any): Promise<Transaction | null> {
+    if (!data) return data
+    const { id, fromAddress, type, toAddress, status, createdAt, ...extra } =
+      data
+    const value = new BigNumber(
+      equals(type, 'TRANSFER_IN') ? data.creditAmount : data.debitAmount
+    )
+    const symbol = equals(type, 'TRANSFER_IN')
+      ? data.creditAsset
+      : data.debitAsset
+    const nonce = Dydx.timestampToNonce(new Date(createdAt).getTime())
+    const token = await this.chainConfig.tokens.find((t) =>
+      equals(String(symbol), t.symbol)
+    )
+    const tx = new Transaction({
+      chainId: this.chainConfig.chainId,
+      hash: id,
+      nonce: Number(nonce),
+      from: fromAddress || '',
+      to: toAddress || '',
+      blockNumber: 0,
+      value,
+      status: TransactionStatus.Fail,
+      timestamp: dayjs(createdAt).unix(),
+      fee: 0,
+      feeToken: String(token?.symbol),
+      tokenAddress: token?.address,
+      extra,
+      symbol,
+    })
+    if (equals(status, 'PENDING')) {
+      tx.status = TransactionStatus.PENDING
+    } else if (equals(status, 'CONFIRMED')) {
+      tx.status = TransactionStatus.COMPLETE
+    }
+    return tx
+  }
   getConfirmations(hashOrHeight: HashOrBlockNumber): Promise<number> {
     throw new Error('Method not implemented.')
   }
@@ -132,39 +168,10 @@ export class Dydx implements IChain {
       )
 
     for (const row of transfers) {
-      const value = new BigNumber(
-        equals(row.type, 'TRANSFER_IN') ? row.creditAmount : row.debitAmount
-      )
-      const symbol = equals(row.type, 'TRANSFER_IN')
-        ? row.creditAsset
-        : row.debitAsset
-      const { id, fromAddress, toAddress, createdAt, ...extra } = row
-      const nonce = Dydx.timestampToNonce(new Date(row.createdAt).getTime())
-      const token = await this.chainConfig.tokens.find((t) =>
-        equals(String(symbol), t.symbol)
-      )
-      const tx = new Transaction({
-        chainId: this.chainConfig.chainId,
-        hash: id,
-        nonce: Number(nonce),
-        from: fromAddress || '',
-        to: toAddress || '',
-        blockNumber: 0,
-        value,
-        status: TransactionStatus.Fail,
-        timestamp: dayjs(createdAt).unix(),
-        fee: 0,
-        feeToken: String(token?.symbol),
-        tokenAddress: token?.address,
-        extra,
-        symbol,
-      })
-      if (equals(row.status, 'PENDING')) {
-        tx.status = TransactionStatus.PENDING
-      } else if (equals(row.status, 'CONFIRMED')) {
-        tx.status = TransactionStatus.COMPLETE
+      const tx = await this.convertTxToEntity(row)
+      if (tx) {
+        response.txlist.push(tx)
       }
-      response.txlist.push(tx)
     }
     return response
   }

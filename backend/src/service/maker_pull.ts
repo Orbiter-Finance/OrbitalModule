@@ -1542,9 +1542,9 @@ export class ServiceMakerPull {
         })
         promiseMethods.push(async () => {
           await savePull(makerPull)
-
-          // compare
-          await this.singleCompareData(makerPull)
+          if (makerPull.tx_status != 'rejected') {
+            await this.newCompareData(makerPull)
+          }
         })
       }
 
