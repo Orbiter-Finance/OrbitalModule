@@ -319,6 +319,7 @@ export class DydxHelper {
       txreceipt_status: transfer.status,
       contractAddress: '', // Only usdc
       confirmations: 0,
+      symbol: isTransferIn ? transfer.creditAsset : transfer.debitAsset
     }
 
     if (isTransferIn) {

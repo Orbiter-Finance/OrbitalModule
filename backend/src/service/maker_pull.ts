@@ -1489,11 +1489,9 @@ export class ServiceMakerPull {
       const promiseMethods: (() => Promise<unknown>)[] = []
       for (const item of transfers) {
         const transaction = DydxHelper.toTransaction(item, this.makerAddress)
-
         if (equalsIgnoreCase(transaction.txreceipt_status, 'rejected')) {
           continue
         }
-
         const amount_flag = getAmountFlag(this.chainId, transaction.value)
 
         let tx_status = transaction.txreceipt_status
@@ -1521,7 +1519,7 @@ export class ServiceMakerPull {
             )
           }
         }
-
+        item['symbol'] = transaction.symbol;
         // save
         const makerPull = (lastMakePull = <MakerPull>{
           chainId: this.chainId,
