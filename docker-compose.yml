@@ -11,7 +11,7 @@ services:
     command: yarn run start
     environment:
       NODE_ENV: 'development'
-      ORBITER_SCENE: maker # dashboard: only dashboard | maker: only maker service | all
+      ORBITER_SCENE: dashboard # dashboard: only dashboard | maker: only maker service | all
       ORBITER_MAKER_PRIVATE_KEYS: '' # {"makerAddress":"private_key"}
       PROMETHEUS_ALERTMANAGER: '{"api":"http://alertmanager:9093"}' # {"api":"http://alertmanager:9093"}
       DB_HOST: db
