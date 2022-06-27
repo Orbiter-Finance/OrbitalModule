@@ -82,7 +82,7 @@ export class IMXHelper {
     let signer: ethers.Wallet | undefined = undefined
     if (addressOrIndex) {
       const provider = new providers.AlchemyProvider('ropsten')
-      signer = new Wallet(makerConfig.privateKeys[addressOrIndex]).connect(
+      signer = new Wallet(makerConfig.privateKeys[String(addressOrIndex).toLowerCase()]).connect(
         provider
       )
     }
