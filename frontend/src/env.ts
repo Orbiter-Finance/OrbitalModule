@@ -1,6 +1,6 @@
 export const $env = {
   baseUrl: '',
-  apiBaseUrl: 'http://iris_dashboard.orbiter.finance:3002/',
+  apiBaseUrl: 'http://localhost:3002/',
   credential: false,
   localProvider: {
     1: 'https://mainnet.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad',
@@ -51,6 +51,8 @@ export const $env = {
     22: 'https://testnet.arbiscan.io/tx/',
     3: 'https://zkscan.io/explorer/transactions/',
     33: 'https://rinkeby.zkscan.io/explorer/transactions/', // /explorer/transactions/   /explorer/accounts/
+    4: 'https://beta.voyager.online/tx/',
+    44: 'https://beta-goerli.voyager.online/tx/',
     6: 'https://polygonscan.com/tx/',
     66: 'https://mumbai.polygonscan.com/tx/',
     7: 'https://optimistic.etherscan.io/tx/',
@@ -76,6 +78,8 @@ export const $env = {
     22: 'https://testnet.arbiscan.io/address/',
     3: 'https://zkscan.io/explorer/accounts/',
     33: 'https://rinkeby.zkscan.io/explorer/accounts/', // /explorer/transactions/   /explorer/accounts/
+    4: 'https://beta.voyager.online/contract/',
+    44: 'https://beta-goerli.voyager.online/contract/',
     6: 'https://polygonscan.com/address/',
     66: 'https://mumbai.polygonscan.com/address/',
     7: 'https://optimistic.etherscan.io/address/',
@@ -101,6 +105,8 @@ export const $env = {
     22: 'https://testnet.arbitrum.io/address/',
     3: 'https://etherscan.io/token/', // same as etherscan
     33: 'https://rinkeby.etherscan.io/token/',
+    4: 'https://beta.voyager.online/token/',
+    44: 'https://beta-goerli.voyager.online/token/',
     6: 'https://polygonscan.com/token/',
     66: 'https://mumbai.polygonscan.com/token/',
     7: 'https://optimistic.etherscan.io/token/',

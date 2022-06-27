@@ -1,4 +1,13 @@
 export default {
+  starknetL1MapL2: {
+    'mainnet-alpha': {
+      'xxxxx': 'xxxx',
+    },
+    'georli-alpha': {
+      '0x8a3214f28946a797088944396c476f014f88dd37':
+        '0x033b88fc03a2ccb1433d6c70b73250d0513c6ee17a7ab61c5af0fbe16bd17a6e',
+    },
+  },
   mainnet: {
     wsEndPoint: 'wss://eth-mainnet.alchemyapi.io/v2/Your Key',
     httpEndPoint: 'https://eth-mainnet.alchemyapi.io/v2/Your Key',

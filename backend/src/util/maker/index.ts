@@ -11,7 +11,6 @@ import {
 import axios from 'axios'
 import BigNumber from 'bignumber.js'
 import dayjs from 'dayjs'
-import { getSelectorFromName } from 'starknet/dist/utils/stark'
 import { Repository } from 'typeorm'
 import Web3 from 'web3'
 import { isEthTokenAddress, sleep } from '..'
@@ -21,14 +20,7 @@ import { MakerNodeTodo } from '../../model/maker_node_todo'
 import { MakerZkHash } from '../../model/maker_zk_hash'
 import { BobaListen } from '../../service/boba/boba_listen'
 import { factoryIMXListen } from '../../service/immutablex/imx_listen'
-import {
-  getL1AddressByL2,
-  getL2AddressByL1,
-  getNetworkIdByChainId,
-  getProviderByChainId,
-  getStarknetAccount,
-  saveMappingL1AndL2,
-} from '../../service/starknet/helper'
+
 import zkspace_help from '../../service/zkspace/zkspace_help'
 import loopring_help from '../../service/loopring/loopring_help'
 import { Core } from '../core'
@@ -38,9 +30,9 @@ import * as orbiterCore from './core'
 import { EthListen } from './eth_listen'
 import { makerList, makerListHistory } from './maker_list'
 import send from './send'
-import { factoryStarknetListen } from './starknet_listen'
 import * as chainCoreUtils from '../../chainCore/src/utils'
 import { IChainConfig } from '../../chainCore/src/types'
+import { getProviderByChainId } from '../../service/starknet/helper'
 const PrivateKeyProvider = require('truffle-privatekey-provider')
 
 const zkTokenInfo: any[] = []
@@ -63,69 +55,69 @@ const repositoryMakerZkHash = (): Repository<MakerZkHash> => {
   return Core.db.getRepository(MakerZkHash)
 }
 
-const starknetMakers: { [key: string]: string } = {}
-async function deployStarknetMaker(makerInfo: any, chainId: number) {
-  if (chainId != 4 && chainId != 44) {
-    return
-  }
+// const starknetMakers: { [key: string]: string } = {}
+// async function deployStarknetMaker(makerInfo: any, chainId: number) {
+//   if (chainId != 4 && chainId != 44) {
+//     return
+//   }
 
-  const { makerAddress } = makerInfo
+//   const { makerAddress } = makerInfo
 
-  try {
-    if (typeof starknetMakers[makerAddress] === 'undefined') {
-      starknetMakers[makerAddress] = ''
+//   try {
+//     if (typeof starknetMakers[makerAddress] === 'undefined') {
+//       starknetMakers[makerAddress] = ''
 
-      const networkId = getNetworkIdByChainId(chainId)
-      const account = await getStarknetAccount(makerAddress, networkId)
-      accessLogger.info(`Deploying starknet, l1: ${makerAddress}`)
+//       const networkId = getNetworkIdByChainId(chainId)
+//       const account = await getStarknetAccount(makerAddress, networkId)
+//       accessLogger.info(`Deploying starknet, l1: ${makerAddress}`)
 
-      while (true) {
-        try {
-          const provider = getProviderByChainId(chainId)
-          const resp = await provider.callContract({
-            contract_address: account.starknetAddress,
-            entry_point_selector: getSelectorFromName('get_nonce'),
-          })
+//       while (true) {
+//         try {
+//           const provider = getProviderByChainId(chainId)
+//           const resp = await provider.callContract({
+//             contract_address: account.starknetAddress,
+//             entry_point_selector: getSelectorFromName('get_nonce'),
+//           })
 
-          if (typeof resp.result?.[0] !== 'undefined') {
-            accessLogger.info(
-              `🎉Deployed starknet, l1: ${makerAddress}, starknet: ${account.starknetAddress}`
-            )
-            starknetMakers[makerAddress] = account.starknetAddress
+//           if (typeof resp.result?.[0] !== 'undefined') {
+//             accessLogger.info(
+//               `🎉Deployed starknet, l1: ${makerAddress}, starknet: ${account.starknetAddress}`
+//             )
+//             starknetMakers[makerAddress] = account.starknetAddress
 
-            // Save L1 <=> L2
-            saveMappingL1AndL2(makerAddress, networkId)
+//             // Save L1 <=> L2
+//             saveMappingL1AndL2(makerAddress, networkId)
 
-            break
-          }
-        } catch (err) {}
+//             break
+//           }
+//         } catch (err) {}
 
-        await sleep(1000)
-      }
-    }
+//         await sleep(1000)
+//       }
+//     }
 
-    // When deploying, wait it
-    if (starknetMakers[makerAddress] === '') {
-      while (true) {
-        if (starknetMakers[makerAddress]) {
-          break
-        }
+//     // When deploying, wait it
+//     if (starknetMakers[makerAddress] === '') {
+//       while (true) {
+//         if (starknetMakers[makerAddress]) {
+//           break
+//         }
 
-        await sleep(1000)
-      }
-    }
-  } catch (err) {
-    delete starknetMakers[makerAddress]
-    errorLogger.error('Deploy starknet maker error: ' + err.message)
-  }
-}
+//         await sleep(1000)
+//       }
+//     }
+//   } catch (err) {
+//     delete starknetMakers[makerAddress]
+//     errorLogger.error('Deploy starknet maker error: ' + err.message)
+//   }
+// }
 
 export async function startMaker(makerInfo: any) {
   if (!makerInfo.t1Address || !makerInfo.t2Address) {
     return
   }
-  await deployStarknetMaker(makerInfo, makerInfo.c1ID)
-  await deployStarknetMaker(makerInfo, makerInfo.c2ID)
+  // await deployStarknetMaker(makerInfo, makerInfo.c1ID)
+  // await deployStarknetMaker(makerInfo, makerInfo.c2ID)
 
   watchPool(makerInfo)
   // new maker trx pull
@@ -285,40 +277,40 @@ async function watchTransfers(pool, state) {
   }
 
   // starknet || starknet_test
-  if (fromChainID == 4 || fromChainID == 44) {
-    const _api = state
-      ? makerConfig[pool.c2Name].api
-      : makerConfig[pool.c1Name].api
-    const networkId = getNetworkIdByChainId(fromChainID)
-    getL2AddressByL1(makerAddress, networkId)
-      .then((starknetAddressMaker) => {
-        accessLogger.info('Starknet transfer listen: ' + starknetAddressMaker)
+  // if (fromChainID == 4 || fromChainID == 44) {
+  //   const _api = state
+  //     ? makerConfig[pool.c2Name].api
+  //     : makerConfig[pool.c1Name].api
+  //   const networkId = getNetworkIdByChainId(fromChainID)
+  //   getL2AddressByL1(makerAddress, networkId)
+  //     .then((starknetAddressMaker) => {
+  //       accessLogger.info('Starknet transfer listen: ' + starknetAddressMaker)
 
-        const skl = factoryStarknetListen(_api)
-        skl.transfer(
-          {
-            to: starknetAddressMaker,
-          },
-          {
-            onConfirmation: (transaction) => {
-              if (!transaction.hash) {
-                return
-              }
+  //       const skl = factoryStarknetListen(_api)
+  //       skl.transfer(
+  //         {
+  //           to: starknetAddressMaker,
+  //         },
+  //         {
+  //           onConfirmation: (transaction) => {
+  //             if (!transaction.hash) {
+  //               return
+  //             }
 
-              if (
-                checkData(transaction.value + '', transaction.hash) === true
-              ) {
-                confirmSNTransaction(pool, state, transaction)
-              }
-            },
-          }
-        )
-      })
-      .catch((err) => {
-        errorLogger.error('GetL2AddressByL1 faild: ' + err.message)
-      })
-    return
-  }
+  //             if (
+  //               checkData(transaction.value + '', transaction.hash) === true
+  //             ) {
+  //               confirmSNTransaction(pool, state, transaction)
+  //             }
+  //           },
+  //         }
+  //       )
+  //     })
+  //     .catch((err) => {
+  //       errorLogger.error('GetL2AddressByL1 faild: ' + err.message)
+  //     })
+  //   return
+  // }
 
   // immutablex || immutablex_test
   if (fromChainID == 8 || fromChainID == 88) {
@@ -711,7 +703,7 @@ async function checkLoopringAccountKey(makerAddress, fromChainID) {
   if (!lpKey) {
     const { exchangeInfo } = await exchangeApi.getExchangeInfo()
     const provider = new PrivateKeyProvider(
-      makerConfig.privateKeys[makerAddress],
+      makerConfig.privateKeys[makerAddress.toLowerCase()],
       fromChainID == 9
         ? makerConfig['mainnet'].httpEndPoint
         : 'https://eth-goerli.alchemyapi.io/v2/fXI4wf4tOxNXZynELm9FIC_LXDuMGEfc'
@@ -1125,94 +1117,94 @@ function confirmZKSTransaction(pool, tokenAddress, state) {
   setInterval(ticker, 10 * 1000)
 }
 
-async function confirmSNTransaction(pool: any, state: any, transaction: any) {
-  const makerAddress = pool.makerAddress
-  const toChain = state ? pool.c1Name : pool.c2Name
-  const tokenAddress = state ? pool.t2Address : pool.t1Address
-  const toChainID = state ? pool.c1ID : pool.c2ID
-  const fromChainID = state ? pool.c2ID : pool.c1ID
-  const { hash, from, nonce, timeStamp, value, txreceipt_status } = transaction
+// async function confirmSNTransaction(pool: any, state: any, transaction: any) {
+//   const makerAddress = pool.makerAddress
+//   const toChain = state ? pool.c1Name : pool.c2Name
+//   const tokenAddress = state ? pool.t2Address : pool.t1Address
+//   const toChainID = state ? pool.c1ID : pool.c2ID
+//   const fromChainID = state ? pool.c2ID : pool.c1ID
+//   const { hash, from, nonce, timeStamp, value, txreceipt_status } = transaction
 
-  accessLogger.info(
-    'Starknet Transaction with hash ' + hash + ', status: ' + txreceipt_status
-  )
-  const networkId = getNetworkIdByChainId(fromChainID)
-  let fromL1Address = ''
-  try {
-    fromL1Address = await getL1AddressByL2(from, networkId)
-  } catch (err) {}
+//   accessLogger.info(
+//     'Starknet Transaction with hash ' + hash + ', status: ' + txreceipt_status
+//   )
+//   const networkId = getNetworkIdByChainId(fromChainID)
+//   let fromL1Address = ''
+//   try {
+//     fromL1Address = await getL1AddressByL2(from, networkId)
+//   } catch (err) {}
 
-  // check
-  if (!fromL1Address) {
-    return
-  }
+//   // check
+//   if (!fromL1Address) {
+//     return
+//   }
 
-  const transactionID = fromL1Address.toLowerCase() + fromChainID + nonce
+//   const transactionID = fromL1Address.toLowerCase() + fromChainID + nonce
 
-  let makerNode: MakerNode | undefined
-  try {
-    makerNode = await repositoryMakerNode().findOne({
-      transactionID: transactionID,
-    })
-  } catch (error) {
-    errorLogger.error('isHaveSqlError =', error)
-    return
-  }
+//   let makerNode: MakerNode | undefined
+//   try {
+//     makerNode = await repositoryMakerNode().findOne({
+//       transactionID: transactionID,
+//     })
+//   } catch (error) {
+//     errorLogger.error('isHaveSqlError =', error)
+//     return
+//   }
 
-  if (!makerNode) {
-    try {
-      await repositoryMakerNode().insert({
-        transactionID: transactionID,
-        userAddress: fromL1Address,
-        makerAddress,
-        fromChain: fromChainID,
-        toChain: toChainID,
-        formTx: hash,
-        fromTimeStamp: orbiterCore.transferTimeStampToTime(timeStamp || '0'),
-        fromAmount: value,
-        formNonce: nonce,
-        txToken: tokenAddress,
-        state: 0,
-      })
-      accessLogger.info('add success')
-    } catch (error) {
-      errorLogger.error('newTransactionSqlError =', error)
-    }
-  }
+//   if (!makerNode) {
+//     try {
+//       await repositoryMakerNode().insert({
+//         transactionID: transactionID,
+//         userAddress: fromL1Address,
+//         makerAddress,
+//         fromChain: fromChainID,
+//         toChain: toChainID,
+//         formTx: hash,
+//         fromTimeStamp: orbiterCore.transferTimeStampToTime(timeStamp || '0'),
+//         fromAmount: value,
+//         formNonce: nonce,
+//         txToken: tokenAddress,
+//         state: 0,
+//       })
+//       accessLogger.info('add success')
+//     } catch (error) {
+//       errorLogger.error('newTransactionSqlError =', error)
+//     }
+//   }
 
-  accessLogger.info(
-    'Transaction with hash ' + hash + ' has been successfully confirmed'
-  )
-  accessLogger.info(
-    'updateFromSql =',
-    `state = 1 WHERE transactionID = '${transactionID}'`
-  )
-  try {
-    await repositoryMakerNode().update(
-      { transactionID: transactionID },
-      { state: 1 }
-    )
-    accessLogger.info('confirmSNTransaction update success')
-  } catch (error) {
-    errorLogger.error('updateFromError =', error)
-    return
-  }
+//   accessLogger.info(
+//     'Transaction with hash ' + hash + ' has been successfully confirmed'
+//   )
+//   accessLogger.info(
+//     'updateFromSql =',
+//     `state = 1 WHERE transactionID = '${transactionID}'`
+//   )
+//   try {
+//     await repositoryMakerNode().update(
+//       { transactionID: transactionID },
+//       { state: 1 }
+//     )
+//     accessLogger.info('confirmSNTransaction update success')
+//   } catch (error) {
+//     errorLogger.error('updateFromError =', error)
+//     return
+//   }
 
-  const toTokenAddress = state ? pool.t1Address : pool.t2Address
+//   const toTokenAddress = state ? pool.t1Address : pool.t2Address
 
-  sendTransaction(
-    makerAddress,
-    transactionID,
-    fromChainID,
-    toChainID,
-    toChain,
-    toTokenAddress,
-    value,
-    fromL1Address,
-    pool,
-    nonce
-  )
-}
+//   sendTransaction(
+//     makerAddress,
+//     transactionID,
+//     fromChainID,
+//     toChainID,
+//     toChain,
+//     toTokenAddress,
+//     value,
+//     fromL1Address,
+//     pool,
+//     nonce
+//   )
+// }
 
 async function confirmIMXTransaction(pool: any, state: any, transaction: any) {
   const makerAddress = pool.makerAddress
@@ -1538,7 +1530,7 @@ function confirmToTransaction(
   }, 8 * 1000)
 }
 
-function confirmToZKTransaction(syncProvider, txID, transactionID = undefined) {
+function confirmToZKTransaction(syncProvider, txID, transactionID) {
   accessLogger.info('confirmToZKTransaction =', getTime())
   setTimeout(async () => {
     let transferReceipt: any
@@ -1546,7 +1538,7 @@ function confirmToZKTransaction(syncProvider, txID, transactionID = undefined) {
       transferReceipt = await syncProvider.getTxReceipt(txID)
     } catch (err) {
       errorLogger.error('zkSync getTxReceipt failed: ' + err.message)
-      return confirmToZKTransaction(syncProvider, txID)
+      return confirmToZKTransaction(syncProvider, txID, transactionID)
     }
 
     accessLogger.info(
@@ -1584,7 +1576,7 @@ function confirmToZKTransaction(syncProvider, txID, transactionID = undefined) {
       return
     }
 
-    return confirmToZKTransaction(syncProvider, txID)
+    return confirmToZKTransaction(syncProvider, txID, transactionID)
   }, 8 * 1000)
 }
 

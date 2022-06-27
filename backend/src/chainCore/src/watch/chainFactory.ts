@@ -14,8 +14,7 @@ import { IChainConfig } from '../types'
 import ZKSync2Watch from './zksync2.watcht'
 import LoopringWatch from './loopring.watch'
 import ImmutableXWatch from './immutableX.watch'
-import { isEmpty } from '../utils'
-import logger from '../utils/logger'
+import StarknetWatch from './starknet.watch'
 
 export class ChainFactory {
   static createWatchChainByIntranetId(
@@ -40,6 +39,10 @@ export class ChainFactory {
       case '3':
       case '33':
         watchChain = new ZKSyncWatch(new chains.ZKSyncChain(chainConfig))
+        break
+      case '4':
+      case '44':
+        watchChain = new StarknetWatch(new chains.StartknetChain(chainConfig))
         break
       case '6':
       case '66':

@@ -33,7 +33,7 @@ async function waittingStartMaker() {
       const makerAddress = item.makerAddress
 
       if (
-        makerConfig.privateKeys[makerAddress] &&
+        makerConfig.privateKeys[makerAddress.toLowerCase()] &&
         startedIndexs.indexOf(index) === -1
       ) {
         // startMaker(item)

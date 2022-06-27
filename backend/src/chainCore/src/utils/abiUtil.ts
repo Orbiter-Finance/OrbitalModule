@@ -3,7 +3,7 @@ import AbiCoder from 'web3-eth-abi'
 import BigNumber from 'bignumber.js'
 export const IERC20_ABI_JSON = require('../abi/IERC20.json')
 export const ZKSYNC2_ABI_JSON = require('../abi/IERC20.json')
-export const ETHER_DYDX_ABI = require('../abi/0xd9d74a29307cc6fc8bf424ee4217f1a587fbc8dc.json')
+export const Forward_ABI = require('../abi/Forward.json')
 type ABIConfig = {
   json: any
   map: Map<string, any>
@@ -13,10 +13,11 @@ ABIMap.set('IERC20', {
   json: IERC20_ABI_JSON,
   map: ABIToMapping(IERC20_ABI_JSON),
 })
-ABIMap.set('0xd9d74a29307cc6fc8bf424ee4217f1a587fbc8dc', {
-  json: ETHER_DYDX_ABI,
-  map: ABIToMapping(ETHER_DYDX_ABI),
+ABIMap.set('Forward', {
+  json: Forward_ABI,
+  map: ABIToMapping(Forward_ABI),
 })
+
 export function ABIToMapping(abi: Array<any>) {
   try {
     const abiMap: Map<string, any> = new Map()
@@ -42,7 +43,7 @@ export function ABIInputToString<T extends { type: string; components?: any }>(
   input: T
 ) {
   if (input.type.includes('tuple')) {
-    return '(' + input.components.map(this.inputItemToString).join(',') + ')'
+    return '(' + input.components.map(ABIInputToString).join(',') + ')'
   }
   return input.type
 }

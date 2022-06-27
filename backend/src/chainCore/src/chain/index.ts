@@ -7,6 +7,7 @@ import { Loopring } from './loopring.service'
 import { Metis } from './metis.service'
 import { Optimism } from './optimism.service'
 import { Polygon } from './polygon.service'
+import { Startknet } from './starknet.service'
 import { ZKSpace } from './zkspace.service'
 import { ZKSync } from './zksync.service'
 import { ZKSync2 } from './zksync2.service'
@@ -22,5 +23,6 @@ export default {
   ZKSyncChain: ZKSync,
   ZKSync2Chain: ZKSync2,
   ImmutableXChain: ImmutableX,
-  LoopringChain: Loopring
+  LoopringChain: Loopring,
+  StartknetChain: Startknet
 }

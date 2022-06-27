@@ -7,7 +7,6 @@ export default function (router: KoaRouter<DefaultState, Context>) {
   router.get('global', async ({ restful }) => {
     const makerAddresses = await getMakerAddresses()
     const exchangeRates = (await getExchangeRates()) || {}
-
     restful.json({ makerAddresses, exchangeRates })
   })
 }

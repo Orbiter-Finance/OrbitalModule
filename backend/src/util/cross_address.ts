@@ -33,7 +33,8 @@ export type CrossAddressExt = {
 
 export const CrossAddressExtTypes = {
   '0x01': 'Cross Ethereum Address',
-  '0x02': 'Cross Stark Address',
+  '0x02': 'Cross Dydx Address',
+  '0x03': 'Cross Stark Address',
 }
 
 export class CrossAddress {

@@ -7,9 +7,14 @@ export type Hash = string
 export type Address = string
 export interface IChainWatch {
   chain: IChain
+  init(): Promise<any>
   apiScan(): Promise<any>
   rpcScan(): Promise<any>
   apiScanCursor(address: Address, tx?: ITransaction): Promise<ITransaction | null> 
+  isWatchWalletAddress(address: string):Promise<boolean>
+  isWatchContractAddress(address: string):Promise<boolean>
+  isWatchTokenAddress(address: string):Promise<boolean>
+  addWatchAddress(address: Array<Address> | Address)
 }
 
 export interface QueryTxFilter {}

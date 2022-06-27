@@ -2,6 +2,8 @@ import dayjs from 'dayjs'
 import { Address, QueryTxFilterIMX, ITransaction } from '../types'
 import BasetWatch from './base.watch'
 export default class ImmutableXWatch extends BasetWatch {
+  minConfirmations: number
+
   public async getApiFilter(address: Address): Promise<QueryTxFilterIMX> {
     const params: Partial<QueryTxFilterIMX> = {
       page_size: 100,
@@ -20,7 +22,7 @@ export default class ImmutableXWatch extends BasetWatch {
     const prevTxTime = cursor?.timestamp || dayjs().unix();
     return response.txlist.filter((tx) => tx.timestamp > prevTxTime);
   }
-  public async rpcScan() {
+  public replayBlock(start: number, end: number, changeBlock?: Function | undefined): Promise<{ start: number; end: number }> {
     throw new Error('Method not implemented.')
   }
 }

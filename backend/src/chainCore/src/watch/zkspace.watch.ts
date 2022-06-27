@@ -28,6 +28,7 @@ import AbstractWatch from './base.watch'
  * rinkeby： [ZKSpace Explorer](https://v3-rinkeby.zkswap.info/)
  */
 export default class ZKSpaceWatch extends AbstractWatch {
+  minConfirmations: number = 1
   public async getApiFilter(address: Address): Promise<QueryTxFilterZKSpace> {
     const params:Partial<QueryTxFilterZKSpace> = {
       types: 'Transfer',
@@ -46,5 +47,8 @@ export default class ZKSpaceWatch extends AbstractWatch {
     const cursor = await this.apiScanCursor(address)
     const prevTxTime = cursor?.timestamp || dayjs().unix();
     return response.txlist.filter((tx) => tx.timestamp > prevTxTime);
+  }
+  public replayBlock(start: number, end: number, changeBlock?: Function | undefined): Promise<{ start: number; end: number }> {
+    throw new Error('Method not implemented.')
   }
 }

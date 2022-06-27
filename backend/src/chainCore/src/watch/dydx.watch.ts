@@ -3,6 +3,8 @@ import { Address, ITransaction, QueryTxFilterDydx } from '../types'
 import { isEmpty } from '../utils'
 import AbstractWatch from './base.watch'
 export default class DydxWatch extends AbstractWatch {
+  minConfirmations: number
+
   public async getApiFilter(address: Address): Promise<QueryTxFilterDydx> {
     const params:QueryTxFilterDydx = {
       limit: 50,
@@ -25,7 +27,7 @@ export default class DydxWatch extends AbstractWatch {
     const response = await this.chain.getTransactions(address, filter)
     return response.txlist
   }
-  public async rpcScan() {
+  public replayBlock(start: number, end: number, changeBlock?: Function | undefined): Promise<{ start: number; end: number }> {
     throw new Error('Method not implemented.')
   }
 }

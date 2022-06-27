@@ -71,41 +71,56 @@ export abstract class EVMChain implements IEVMChain {
     input: string,
     contractAddress: string
   ) {
+    const callFuncNameSign = input.substring(0, 10)
+    const forwardNameSigns = ['0x29723511', '0x46f506ad']
     const decodeInputData = decodeMethod(
       String(input),
-      contractAddress.toLowerCase()
+      forwardNameSigns.includes(callFuncNameSign) ? 'Forward' : 'ERC20'
     )
     const result = {
       //...
       name: '',
+      transferData: {
+        recipient: '',
+        // sender: '',
+        amount: new BigNumber(0),
+        tokenAddress: '',
+        ext: '',
+      },
       data: {},
     }
     if (!decodeInputData || !decodeInputData.params) {
       return result
     }
     result.name = decodeInputData.name
-    switch (decodeInputData.name) {
-      case 'transferERC20':
-        if (
-          this.chainConfig.contracts.findIndex((addr) =>
-            equals(addr, contractAddress)
-          ) !== -1
-        ) {
-          decodeInputData.params.forEach((el) => {
-            const filedName = el.name.replace('_', '')
-            result.data[filedName] = el.value
-            result[filedName] = el
-          })
-        }
-        break
-      case 'transfer':
-        decodeInputData.params.forEach((el) => {
-          const filedName = el.name.replace('_', '')
-          result.data[filedName] = el.value
-          result[filedName] = el
-        })
-        break
+    decodeInputData.params.forEach((el) => {
+      const filedName = el.name.replace('_', '')
+      result.data[filedName] = el.value
+      result[filedName] = el
+    })
+    if (forwardNameSigns.includes(callFuncNameSign)) {
+      // Forward
+      switch (callFuncNameSign) {
+        case '0x29723511': // transfer
+          result.transferData.recipient = result.data['to']
+          result.transferData.ext = result.data['ext']
+          result.transferData.tokenAddress =
+            this.chainConfig.nativeCurrency.address
+          break
+        case '0x46f506ad': // transfer erc20
+          result.transferData.recipient = result.data['to']
+          result.transferData.ext = result.data['ext']
+          result.transferData.tokenAddress = result.data['token']
+          result.transferData.amount = new BigNumber(result.data['amount'])
+          break
+      }
+    } else {
+      // Standard ERC20 Transfer
+      result.transferData.recipient = result.data['recipient']
+      result.transferData.amount = new BigNumber(result.data['amount'])
+      result.transferData.tokenAddress = contractAddress;
     }
+    // delete result.data;
     return result
   }
   public async convertTxToEntity(trx: any): Promise<Transaction | null> {
@@ -130,7 +145,7 @@ export abstract class EVMChain implements IEVMChain {
     // status
     const block = await this.web3.eth.getBlock(Number(blockNumber), false)
     const confirmations = await this.getConfirmations(blockNumber)
-    const newTx = new Transaction({
+    const txData = new Transaction({
       chainId: this.chainConfig.chainId,
       hash,
       from,
@@ -154,33 +169,33 @@ export abstract class EVMChain implements IEVMChain {
       source: 'rpc',
     })
     if (trxRcceipt.status) {
-      newTx.status = TransactionStatus.COMPLETE
+      txData.status = TransactionStatus.COMPLETE
     }
     // valid main token or contract token
     if (!isEmpty(to)) {
       const code = await this.web3.eth.getCode(to)
       if (code === '0x') {
-        newTx.to = to;
-        newTx.tokenAddress = this.chainConfig.nativeCurrency.address
-        newTx.symbol = this.chainConfig.nativeCurrency.symbol
+        txData.to = to
+        txData.tokenAddress = this.chainConfig.nativeCurrency.address
+        txData.symbol = this.chainConfig.nativeCurrency.symbol
       } else {
         // contract token
-        newTx.tokenAddress = to
-        newTx.to = ''
-        const contractData = await this.decodeInputContractTransfer(input, to)
-        if (contractData.name === 'transferERC20') {
-          newTx.tokenAddress = contractData.data['token']
-          newTx.to = contractData.data['to']
-          newTx.value = new BigNumber(contractData.data['amount'])
-        } else if (contractData.name === 'transfer') {
-          newTx.tokenAddress = to
-          newTx.to = contractData.data['recipient']
-          newTx.value = new BigNumber(contractData.data['amount'])
+        txData.tokenAddress = to
+        txData.to = ''
+        const inputData = await this.decodeInputContractTransfer(input, to)
+        // transferData
+        if (inputData && inputData.transferData) {
+          const { tokenAddress, recipient, amount, ...inputExtra } =
+            inputData.transferData
+          txData.tokenAddress = tokenAddress
+          txData.to = recipient
+          txData.value = amount.gt(0) ? amount : txData.value;
+          Object.assign(txData.extra, inputExtra)
         }
-        newTx.symbol = await this.getTokenSymbol(String(newTx.tokenAddress))
+        txData.symbol = await this.getTokenSymbol(String(txData.tokenAddress))
       }
     }
-    return newTx
+    return txData
   }
   public async getBalance(address: string): Promise<BigNumber> {
     const value = await this.web3.eth.getBalance(address)

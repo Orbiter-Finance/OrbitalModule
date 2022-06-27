@@ -18,7 +18,7 @@
       "wss://eth-rinkeby.alchemyapi.io/v2/{You Key}"
     ],
     "watch": ["rpc", "api"],
-    "contracts": [],
+    "contracts": ["0x783703C20dF627893952d59DF40f556A172d1719"],
     "tokens": [
       {
         "name": "USD Coin",
@@ -45,7 +45,7 @@
     },
     "rpc": ["wss://arb-rinkeby.g.alchemy.com/v2/{You Key}"],
     "watch": ["rpc", "api"],
-    "contracts": [],
+    "contracts": ["0x721fBB2C2C9cdFa5547feE6b683949c20F175457"],
     "tokens": [
       {
         "name": "USD Coin",
@@ -151,7 +151,7 @@
       "address": "0x0000000000000000000000000000000000000000"
     },
     "watch": ["api", "rpc"],
-    "contracts": [],
+    "contracts": ["0x40eC19690ebEd534e9b9C58e341727028cF143c0"],
     "tokens": [
       {
         "name": "Wrapped Ether",
@@ -184,7 +184,7 @@
     },
     "rpc": ["wss://opt-kovan.g.alchemy.com/v2/{You Key}"],
     "watch": ["api", "rpc"],
-    "contracts": [],
+    "contracts": ["0x2200a79aDdFE2EFd7bDe34300f4C8FE902E31d39"],
     "tokens": []
   },
   {
@@ -303,6 +303,28 @@
     },
     "rpc": [],
     "watch": ["api"],
+    "tokens": []
+  },
+  {
+    "api": {
+      "url": "",
+      "key": ""
+    },
+    "chainId": "SN_GOERLI",
+    "networkId": "goerli-alpha",
+    "internalId": "44",
+    "name": "Starknet Goerli Testnet",
+    "debug": false,
+    "contracts": ["0x0457bf9a97e854007039c43a6cc1a81464bd2a4b907594dabc9132c162563eb3"],
+    "nativeCurrency": {
+      "id":0,
+      "name": "Ether",
+      "symbol": "ETH",
+      "decimals": 18,
+      "address": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+    },
+    "rpc": [],
+    "watch": ["rpc"],
     "tokens": []
   }
 ]

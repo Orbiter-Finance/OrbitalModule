@@ -2,6 +2,8 @@ import { Address, ITransaction, QueryTxFilterZKSync } from '../types'
 import { equals } from '../utils'
 import AbstractWatch from './base.watch'
 export default class ZKSyncWatch extends AbstractWatch {
+  minConfirmations: number = 1
+
   public async getApiFilter(address: Address): Promise<QueryTxFilterZKSync> {
     const params: Partial<QueryTxFilterZKSync> = {
       from: 'latest',
@@ -24,7 +26,7 @@ export default class ZKSyncWatch extends AbstractWatch {
       equals(row.extra['type'], 'Transfer')
     )
   }
-  public async rpcScan() {
+  public replayBlock(start: number, end: number, changeBlock?: Function | undefined): Promise<{ start: number; end: number }> {
     throw new Error('Method not implemented.')
   }
 }

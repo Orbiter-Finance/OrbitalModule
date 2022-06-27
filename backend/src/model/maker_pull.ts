@@ -62,6 +62,12 @@ export class MakerPull extends CommonEntity {
   @Column('json', { default: null })
   txExt: { type: string; value: string }
 
+  @Column('varchar', { default: null })
+  userReceive: string;
+  @Column('varchar', { default: null })
+  makerSender: string;
+  @Column('varchar', { default: null })
+  symbol: string;
   @Column('timestamp', { default: null })
   txTime: Date
 

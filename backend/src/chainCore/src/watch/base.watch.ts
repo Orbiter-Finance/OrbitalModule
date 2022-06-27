@@ -1,6 +1,6 @@
 import {
   Address,
-  Hash,
+  AddressMapTransactions,
   IChain,
   IChainWatch,
   ITransaction,
@@ -10,7 +10,7 @@ import {
 } from '../types'
 import PubSubMQ from '../utils/pubsub'
 import logger from '../utils/logger'
-import { isEmpty, orderBy } from '../utils'
+import { equals, isEmpty, orderBy } from '../utils'
 import Keyv from 'keyv'
 import dayjs from 'dayjs'
 import { IntervalTimerDecorator } from '../decorators/intervalTimer.decorator'
@@ -24,8 +24,15 @@ export default abstract class BasetWatch implements IChainWatch {
       time: number
     }
   > = new Map()
-  // @cacheDecorator('cursor')
   protected cache: Keyv
+  private rpcLastBlockHeight: number = 0
+  public set setRpcLastBlockHeight(height: number) {
+    if (height > this.rpcLastBlockHeight) {
+      this.rpcLastBlockHeight = height
+      this.cache.set(`rpcScan:${this.chain.chainConfig.chainId}`, height)
+    }
+  }
+  abstract readonly minConfirmations: number
   constructor(public readonly chain: IChain) {
     this.cache = new Keyv({
       store: new KeyvFile({
@@ -36,6 +43,26 @@ export default abstract class BasetWatch implements IChainWatch {
         decode: JSON.parse, // deserialize function
       }),
     })
+  }
+
+  public async isWatchWalletAddress(address: string): Promise<boolean> {
+    return this.watchAddress.has(address.toLowerCase())
+  }
+  public async isWatchContractAddress(address: string): Promise<boolean> {
+    const isWatchContract =
+      this.chain.chainConfig.contracts.findIndex((addr) =>
+        equals(addr, address)
+      ) != -1
+    return isWatchContract
+  }
+  public async isWatchTokenAddress(address: string): Promise<boolean> {
+    const chainConfig = this.chain.chainConfig
+    const isChainMainCoin = equals(chainConfig.nativeCurrency.address, address)
+    if (isChainMainCoin) return true
+    const isWatchToken =
+      chainConfig.tokens.findIndex((token) => equals(token.address, address)) !=
+      -1
+    return isWatchToken
   }
   public abstract getApiFilter(address: Address): Promise<QueryTxFilter>
   public async init() {
@@ -59,24 +86,12 @@ export default abstract class BasetWatch implements IChainWatch {
       for (const addr of address) {
         const addrLower = addr.toLowerCase()
         if (!this.watchAddress.has(addrLower) && !isEmpty(addrLower)) {
-          this.apiScanCursor(addrLower).catch((error) => {
-            logger.error(
-              `[${this.chain.chainConfig.name}] addWatchAddress init cursor error:`,
-              error.message
-            )
-          })
           this.watchAddress.set(addrLower, [])
         }
       }
     } else if (typeof address === 'string') {
       const addrLower = address.toLowerCase()
       if (!this.watchAddress.has(addrLower) && !isEmpty(addrLower)) {
-        this.apiScanCursor(addrLower).catch((error) => {
-          logger.error(
-            `[${this.chain.chainConfig.name}] addWatchAddress init cursor error:`,
-            error.message
-          )
-        })
         this.watchAddress.set(addrLower, [])
       }
     } else {
@@ -229,9 +244,10 @@ export default abstract class BasetWatch implements IChainWatch {
       const prevCursor = await this.apiScanCursor(address)
       if (prevCursor) {
         // exec query trx
-        this.chain.chainConfig.debug && logger.info(
-          `[${this.chain.chainConfig.name}] API Query Transaction in Progress : makerAddress=${address},blockNumber=${prevCursor.blockNumber},timestamp=${prevCursor.timestamp}`
-        )
+        this.chain.chainConfig.debug &&
+          logger.info(
+            `[${this.chain.chainConfig.name}] API Query Transaction in Progress : makerAddress=${address},blockNumber=${prevCursor.blockNumber},timestamp=${prevCursor.timestamp}`
+          )
         queryTxs = await this.apiWatchNewTransaction(address)
         await this.pushMessage(address, queryTxs)
         const latest = orderBy(
@@ -244,8 +260,50 @@ export default abstract class BasetWatch implements IChainWatch {
     }
     return queryTxs
   }
-
-  rpcScan(): Promise<any> {
-    throw new Error('Method not implemented.')
+  public abstract replayBlock(
+    start: number,
+    end: number,
+    changeBlock?: Function
+  ): Promise<{ start: number; end: number }>
+  @IntervalTimerDecorator
+  public async rpcScan() {
+    const currentBlockCacheKey = `rpcScan:${this.chain.chainConfig.chainId}`
+    const latestHeight = await this.chain.getLatestHeight()
+    if (!this.rpcLastBlockHeight || this.rpcLastBlockHeight <= 0) {
+      // get cache height
+      let cacheBlock = await this.cache.get(currentBlockCacheKey)
+      if (!cacheBlock) {
+        cacheBlock = latestHeight
+      }
+      this.setRpcLastBlockHeight = cacheBlock
+    }
+    const currentBlockHeight = this.rpcLastBlockHeight
+    const isScan = latestHeight - currentBlockHeight + 1 > this.minConfirmations
+    if (isScan) {
+      const result = await this.replayBlock(
+        currentBlockHeight,
+        latestHeight,
+        (blockNumber: number, txmap: AddressMapTransactions) => {
+          this.setRpcLastBlockHeight = blockNumber
+          if (txmap && txmap.size > 0) {
+            txmap.forEach(async (txlist, address) => {
+              this.pushMessage(address, txlist)
+              if (txlist.length > 0) {
+                this.chain.chainConfig.debug &&
+                  logger.info(
+                    `[${this.chain.chainConfig.name}] RpcScan New Transaction: Cursor = ${blockNumber} `,
+                    txlist.map((tx) => tx.hash)
+                  )
+              }
+            })
+          }
+        }
+      )
+      this.chain.chainConfig.debug &&
+        logger.info(
+          `[${this.chain.chainConfig.name}] rpcScan End of scan result：`,
+          result
+        )
+    }
   }
 }

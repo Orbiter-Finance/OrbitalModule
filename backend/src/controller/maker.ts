@@ -196,13 +196,20 @@ export default function (router: KoaRouter<DefaultState, Context>) {
     const makerAddresses = await serviceMaker.getMakerAddresses()
     const addresses: string[] = []
     for (const item of makerAddresses) {
-      if (makerConfig.privateKeys[item]) {
+      if (makerConfig.privateKeys[item.toLowerCase()]) {
         continue
       }
 
       addresses.push(item)
     }
-
+    const starknetL1MapL2 = process.env.NODE_ENV == 'development'
+      ? makerConfig.starknetL1MapL2['georli-alpha']
+      : makerConfig.starknetL1MapL2['mainnet-alpha']
+    if (starknetL1MapL2) {
+      for (const L1 in starknetL1MapL2) {
+        addresses.push(starknetL1MapL2[L1])
+      }
+    }
     restful.json(addresses)
   })
 
@@ -216,13 +223,16 @@ export default function (router: KoaRouter<DefaultState, Context>) {
         if (!isEthereumAddress(makerAddress)) {
           continue
         }
-        if (!body[makerAddress] || makerConfig.privateKeys[makerAddress]) {
+        if (
+          !body[makerAddress] ||
+          makerConfig.privateKeys[makerAddress.toLowerCase()]
+        ) {
           continue
         }
 
         makerAddresses.push(makerAddress)
 
-        makerConfig.privateKeys[makerAddress] = body[makerAddress]
+        makerConfig.privateKeys[makerAddress.toLowerCase()] = body[makerAddress]
       }
     }
 
