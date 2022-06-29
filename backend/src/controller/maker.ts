@@ -207,7 +207,11 @@ export default function (router: KoaRouter<DefaultState, Context>) {
       : makerConfig.starknetL1MapL2['mainnet-alpha']
     if (starknetL1MapL2) {
       for (const L1 in starknetL1MapL2) {
-        addresses.push(starknetL1MapL2[L1])
+        const address = starknetL1MapL2[L1].toLowerCase();
+        if (makerConfig.privateKeys[address]) {
+          continue
+        };
+        addresses.push(address)
       }
     }
     restful.json(addresses)
@@ -220,9 +224,6 @@ export default function (router: KoaRouter<DefaultState, Context>) {
     const makerAddresses: string[] = []
     for (const makerAddress in body) {
       if (Object.prototype.hasOwnProperty.call(body, makerAddress)) {
-        if (!isEthereumAddress(makerAddress)) {
-          continue
-        }
         if (
           !body[makerAddress] ||
           makerConfig.privateKeys[makerAddress.toLowerCase()]

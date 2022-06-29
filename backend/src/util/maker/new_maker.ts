@@ -1,6 +1,4 @@
-import {
-  uniq,
-} from './../../chainCore/src/utils'
+import { uniq } from './../../chainCore/src/utils'
 import { getMakerList, sendTransaction } from '.'
 import { ScanChainMain } from '../../chainCore'
 import { ITransaction, TransactionStatus } from '../../chainCore/src/types'
@@ -99,8 +97,8 @@ export function checkAmount(
   }
   return true
 }
-const caches: Map<string, Keyv> = new Map();
-const transfers:Map<string,Map<string,string>> = new Map();
+const caches: Map<string, Keyv> = new Map()
+const transfers: Map<string, Map<string, string>> = new Map()
 function getCacheClient(chainId: string) {
   if (caches.has(chainId)) {
     return caches.get(chainId)
@@ -125,7 +123,7 @@ export async function startNewMakerTrxPull() {
     convertMakerList[intranetId].forEach((address) => {
       if (address) {
         const pullKey = `${intranetId}:${address.toLowerCase()}`
-        transfers.set(intranetId, new Map());
+        transfers.set(intranetId, new Map())
         LastPullTxMap.set(pullKey, Date.now())
       }
     })
@@ -147,13 +145,13 @@ async function subscribeNewTransaction(newTxList: Array<ITransaction>) {
   for (const chainId in groupData) {
     const txList: Array<ITransaction> = groupData[chainId]
     for (const tx of txList) {
-      accessLogger.info(`subscribeNewTransaction：`, JSON.stringify(tx))
       if (!(await isWatchAddress(tx.to))) {
         // accessLogger.error(
         //   `The receiving address is not a Maker address=${tx.to}, hash=${tx.hash}`
         // )
         continue
       }
+      accessLogger.info(`subscribeNewTransaction：`, JSON.stringify(tx))
       if (equals(tx.to, tx.from) || tx.value.lte(0)) {
         accessLogger.error(
           `subscribeNewTransaction to equals from | value <= 0 hash:${tx.hash}`
@@ -260,13 +258,7 @@ async function subscribeNewTransaction(newTxList: Array<ITransaction>) {
         )
         continue
       }
-      const makerAddress = marketItem.recipient.toLowerCase()
-      if (isEmpty(makerConfig.privateKeys[makerAddress.toLowerCase()])) {
-        accessLogger.error(
-          `[${transactionID}] Your private key is not injected into the coin dealer address,makerAddress =${makerAddress}`
-        )
-        continue
-      }
+     
       if (!['9', '99'].includes(fromChain.internalId)) {
         const checkAmountResult = checkAmount(
           Number(fromChain.internalId),
@@ -296,13 +288,24 @@ export async function confirmTransactionSendMoneyBack(
   const toChainID = Number(market.toChain.id)
   const toChainName = market.toChain.name
   const makerAddress = market.sender
-  const cache = getCacheClient(String(fromChainID));
-  const chainTransferMap = transfers.get(String(fromChainID));
-  if (chainTransferMap?.has(tx.hash.toLowerCase()) || await cache?.has(tx.hash.toLowerCase())) {
-    return accessLogger.error(`starknet ${tx.hash}  ${transactionID} transfer exists!`)
+  if (isEmpty(makerConfig.privateKeys[makerAddress.toLowerCase()])) {
+    accessLogger.error(
+      `[${transactionID}] Your private key is not injected into the coin dealer address,makerAddress =${makerAddress}`
+    )
+    return;
   }
-  chainTransferMap?.set(tx.hash.toLowerCase(), "ok")
-  await cache?.set(tx.hash.toLowerCase(), true,1000 * 60 * 60 * 24)
+  const cache = getCacheClient(String(fromChainID))
+  const chainTransferMap = transfers.get(String(fromChainID))
+  if (
+    chainTransferMap?.has(tx.hash.toLowerCase()) ||
+    (await cache?.has(tx.hash.toLowerCase()))
+  ) {
+    return accessLogger.error(
+      `starknet ${tx.hash}  ${transactionID} transfer exists!`
+    )
+  }
+  chainTransferMap?.set(tx.hash.toLowerCase(), 'ok')
+  await cache?.set(tx.hash.toLowerCase(), true, 1000 * 60 * 60 * 24)
   LastPullTxMap.set(`${fromChainID}:${makerAddress}`, tx.timestamp * 1000)
   // check send
   // valid is exits
