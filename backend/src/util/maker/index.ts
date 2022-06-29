@@ -1667,7 +1667,7 @@ export async function confirmToSNTransaction(
   // When reject
   if (transaction.status == 'REJECTED') {
     errorLogger.info(
-      `starknet transfer failed: ${transaction.status}, txID:${txID}, transactionID:${transactionID}`
+      `starknet transfer failed: ${transaction.status}, txID:${txID}, transactionID:${transactionID} transaction_failure_reason,`, transaction['transaction_failure_reason']
     )
     // check nonce
     if (transaction['transaction_failure_reason'] && transaction['transaction_failure_reason']['error_message'].includes('Error message: nonce invalid')) {

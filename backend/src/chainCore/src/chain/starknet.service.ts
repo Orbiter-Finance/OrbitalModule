@@ -16,7 +16,7 @@ export class Startknet implements IChain {
   public provider: starknet.Provider
   constructor(public readonly chainConfig: IChainConfig) {
     this.provider = new starknet.Provider({
-      network: <any>this.chainConfig.network,
+      network: <any>this.chainConfig.networkId,
     })
   }
   public async getTokenInfo(idOrAddrsss: string | number) {
