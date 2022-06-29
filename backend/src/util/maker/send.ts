@@ -25,7 +25,9 @@ import { sign_musig } from 'zksync-crypto'
 import { getTargetMakerPool } from '../../service/maker'
 import { accessLogger, errorLogger } from '../logger'
 import { SendQueue } from './send_queue'
-import { sendEthTransaction } from '../../service/starknet/helper'
+import {
+  StarknetHelp,
+} from '../../service/starknet/helper'
 import { equals } from '../../chainCore/src/utils'
 
 const PrivateKeyProvider = require('truffle-privatekey-provider')
@@ -337,22 +339,27 @@ async function sendConsumer(value: any) {
   }
   // starknet || starknet_test
   if (chainID == 4 || chainID == 44) {
+    const privateKey = makerConfig.privateKeys[makerAddress.toLowerCase()]
+    const network = equals(chainID, 44) ? 'goerli-alpha' : 'mainnet-alpha'
+    const starknet = new StarknetHelp(<any>network, privateKey, makerAddress)
+    const { nonce, rollback } = await starknet.takeOutNonce()
     try {
-      const { hash }: any = await sendEthTransaction(
-        equals(chainID, 44) ? 'goerli-alpha' : 'mainnet-alpha',
-        makerAddress,
+      const { hash }: any = await starknet.signTransfer(
         {
-          to: toAddress,
+          recipient: toAddress,
           tokenAddress,
           amount: String(amountToSend),
+          nonce,
         }
       )
       return {
         code: 0,
         txid: hash,
+        rollback
       }
     } catch (error) {
       console.error(error)
+      rollback()
       return {
         code: 1,
         txid: 'starknet transfer error: ' + error.message,
@@ -437,7 +444,6 @@ async function sendConsumer(value: any) {
         }
       }
     } catch (error) {
-      console.log(error);
       return {
         code: 1,
         txid: 'immutablex transfer error: ' + error.message,

@@ -1,5 +1,4 @@
 import {
-  oldMarketConvertScanChainConfig,
   uniq,
 } from './../../chainCore/src/utils'
 import { getMakerList, sendTransaction } from '.'
@@ -23,6 +22,9 @@ import { MakerNode } from '../../model/maker_node'
 import { makerConfig } from '../../config'
 import mainnetChains from '../../chainCore/chains.json'
 import testnetChains from '../../chainCore/testnet.json'
+import Keyv from 'keyv'
+import KeyvFile from '../../chainCore/src/utils/keyvFile'
+import dayjs from 'dayjs'
 const allChainsConfig = [...mainnetChains, ...testnetChains]
 const repositoryMakerNode = (): Repository<MakerNode> => {
   return Core.db.getRepository(MakerNode)
@@ -97,6 +99,24 @@ export function checkAmount(
   }
   return true
 }
+const caches: Map<string, Keyv> = new Map();
+const transfers:Map<string,Map<string,string>> = new Map();
+function getCacheClient(chainId: string) {
+  if (caches.has(chainId)) {
+    return caches.get(chainId)
+  }
+  const cache = new Keyv({
+    store: new KeyvFile({
+      filename: `logs/transfer/${chainId}`, // the file path to store the data
+      expiredCheckDelay: 999999 * 24 * 3600 * 1000, // ms, check and remove expired data in each ms
+      writeDelay: 100, // ms, batch write to disk in a specific duration, enhance write performance.
+      encode: JSON.stringify, // serialize function
+      decode: JSON.parse, // deserialize function
+    }),
+  })
+  caches.set(chainId, cache)
+  return cache
+}
 export async function startNewMakerTrxPull() {
   const makerList = await getNewMarketList()
   const convertMakerList = groupWatchAddressByChain(makerList)
@@ -105,9 +125,8 @@ export async function startNewMakerTrxPull() {
     convertMakerList[intranetId].forEach((address) => {
       if (address) {
         const pullKey = `${intranetId}:${address.toLowerCase()}`
-        if (!LastPullTxMap.has(pullKey)) {
-          LastPullTxMap.set(pullKey, Date.now())
-        }
+        transfers.set(intranetId, new Map());
+        LastPullTxMap.set(pullKey, Date.now())
       }
     })
     scanChain.mq.subscribe(`${intranetId}:txlist`, subscribeNewTransaction)
@@ -130,9 +149,9 @@ async function subscribeNewTransaction(newTxList: Array<ITransaction>) {
     for (const tx of txList) {
       accessLogger.info(`subscribeNewTransaction：`, JSON.stringify(tx))
       if (!(await isWatchAddress(tx.to))) {
-        accessLogger.error(
-          `The receiving address is not a Maker address=${tx.to}, hash=${tx.hash}`
-        )
+        // accessLogger.error(
+        //   `The receiving address is not a Maker address=${tx.to}, hash=${tx.hash}`
+        // )
         continue
       }
       if (equals(tx.to, tx.from) || tx.value.lte(0)) {
@@ -277,6 +296,13 @@ export async function confirmTransactionSendMoneyBack(
   const toChainID = Number(market.toChain.id)
   const toChainName = market.toChain.name
   const makerAddress = market.sender
+  const cache = getCacheClient(String(fromChainID));
+  const chainTransferMap = transfers.get(String(fromChainID));
+  if (chainTransferMap?.has(tx.hash.toLowerCase()) || await cache?.has(tx.hash.toLowerCase())) {
+    return accessLogger.error(`starknet ${tx.hash}  ${transactionID} transfer exists!`)
+  }
+  chainTransferMap?.set(tx.hash.toLowerCase(), "ok")
+  await cache?.set(tx.hash.toLowerCase(), true,1000 * 60 * 60 * 24)
   LastPullTxMap.set(`${fromChainID}:${makerAddress}`, tx.timestamp * 1000)
   // check send
   // valid is exits

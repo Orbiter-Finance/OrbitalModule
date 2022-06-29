@@ -20,7 +20,7 @@ import { MakerNodeTodo } from '../../model/maker_node_todo'
 import { MakerZkHash } from '../../model/maker_zk_hash'
 import { BobaListen } from '../../service/boba/boba_listen'
 import { factoryIMXListen } from '../../service/immutablex/imx_listen'
-
+import {StarknetHelp} from '../../service/starknet/helper'
 import zkspace_help from '../../service/zkspace/zkspace_help'
 import loopring_help from '../../service/loopring/loopring_help'
 import { Core } from '../core'
@@ -1502,7 +1502,9 @@ function confirmToTransaction(
       )
 
       accessLogger.info(
-        `[${transactionID}] Transaction with hash ` + txHash + ' has been successfully confirmed'
+        `[${transactionID}] Transaction with hash ` +
+          txHash +
+          ' has been successfully confirmed'
       )
       accessLogger.info(
         'update maker_node =',
@@ -1513,7 +1515,9 @@ function confirmToTransaction(
           { transactionID: transactionID },
           { toTimeStamp: timestamp, state: 3 }
         )
-        accessLogger.info(`[${transactionID}]  confirmToTransaction->Chain:${Chain} update success`)
+        accessLogger.info(
+          `[${transactionID}]  confirmToTransaction->Chain:${Chain} update success`
+        )
       } catch (error) {
         errorLogger.error(`[${transactionID}]  updateToSqlError =`, error)
         return
@@ -1646,51 +1650,50 @@ function confirmToLPTransaction(
   }, 8 * 1000)
 }
 
-async function confirmToSNTransaction(
+export async function confirmToSNTransaction(
   txID: string,
   transactionID: string,
-  chainId: number
-) {
+  chainId: number,
+  makerAddress:string
+): Promise<boolean | undefined> {
   accessLogger.info('confirmToSNTransaction =', getTime())
-  while (true) {
-    try {
-      const provider = getProviderByChainId(chainId)
-      const transaction = await provider.getTransaction(txID)
-      accessLogger.info(
-        'sn_transaction =',
-        JSON.stringify({ status: transaction.status, txID })
-      )
+  const provider = getProviderByChainId(chainId)
+  const transaction = await provider.getTransaction(txID)
+  accessLogger.info(
+    'sn_transaction =',
+    JSON.stringify({ status: transaction.status, txID })
+  )
 
-      // When reject
-      if (transaction.status == 'REJECTED') {
-        break
-      }
-
-      if (
-        transaction.status == 'ACCEPTED_ON_L1' ||
-        transaction.status == 'ACCEPTED_ON_L2'
-      ) {
-        accessLogger.info(
-          'sn_Transaction with hash ' +
-            txID +
-            ' has been successfully confirmed'
-        )
-        accessLogger.info(
-          'update maker_node =',
-          `state = 3 WHERE transactionID = '${transactionID}'`
-        )
-        await repositoryMakerNode().update(
-          { transactionID: transactionID },
-          { state: 3 }
-        )
-        break
-      }
-    } catch (err) {
-      errorLogger.error('sn_getTransaction failed: ', err.message)
+  // When reject
+  if (transaction.status == 'REJECTED') {
+    errorLogger.info(
+      `starknet transfer failed: ${transaction.status}, txID:${txID}, transactionID:${transactionID}`
+    )
+    // check nonce
+    if (transaction['transaction_failure_reason'] && transaction['transaction_failure_reason']['error_message'].includes('Error message: nonce invalid')) {
+      return true;
     }
-
-    await sleep(8 * 1000)
+    return false;
+  } else if (
+    transaction.status == 'ACCEPTED_ON_L1' ||
+    transaction.status == 'ACCEPTED_ON_L2' || 
+    transaction.status == 'PENDING'
+  ) {
+    accessLogger.info(
+      'sn_Transaction with hash ' + txID + ' has been successfully confirmed'
+    )
+    accessLogger.info(
+      'update maker_node =',
+      `state = 3 WHERE transactionID = '${transactionID}'`
+    )
+    await repositoryMakerNode().update(
+      { transactionID: transactionID },
+      { state: 3 }
+    )
+    return true
   }
+  await sleep(1000 * 10)
+  return await confirmToSNTransaction(txID, transactionID, chainId, makerAddress)
 }
 
 function confirmToZKSTransaction(
@@ -1939,7 +1942,7 @@ export async function sendTransaction(
   accessLogger.info('amountToSend =', tAmount)
   accessLogger.info('toChain =', toChain)
   // accessLogger.info(
-    // `transactionID=${transactionID}&makerAddress=${makerAddress}&fromChainID=${fromChainID}&toAddress=${toAddress}&toChain=${toChain}&toChainID=${toChainID}`
+  // `transactionID=${transactionID}&makerAddress=${makerAddress}&fromChainID=${fromChainID}&toAddress=${toAddress}&toChain=${toChain}&toChainID=${toChainID}`
   // )
   const toChainConfig: IChainConfig = chainCoreUtils.getChainByInternalId(
     String(toChainID)
@@ -1959,18 +1962,21 @@ export async function sendTransaction(
     )
     return
   }
-  accessLogger.info(`${transactionID} Exec Send Transfer`, JSON.stringify({
-    makerAddress,
-    toAddress,
-    toChain,
-    fromChainID,
-    toChainID,
-    tokenAddress,
-    tAmount,
-    result_nonce,
-    nonce,
-    tokenInfo
-  }))
+  accessLogger.info(
+    `${transactionID} Exec Send Transfer`,
+    JSON.stringify({
+      makerAddress,
+      toAddress,
+      toChain,
+      fromChainID,
+      toChainID,
+      tokenAddress,
+      tAmount,
+      result_nonce,
+      nonce,
+      tokenInfo,
+    })
+  )
   await send(
     makerAddress,
     toAddress,
@@ -2000,7 +2006,9 @@ export async function sendTransaction(
             state: 2,
           }
         )
-        accessLogger.info(`[${transactionID}] sendTransaction toChain ${toChain} update success`)
+        accessLogger.info(
+          `[${transactionID}] sendTransaction toChain ${toChain} update success`
+        )
       } catch (error) {
         errorLogger.error(`[${transactionID}] updateToSqlError =`, error)
         return
@@ -2009,7 +2017,10 @@ export async function sendTransaction(
         let syncProvider = response.zkProvider
         confirmToZKTransaction(syncProvider, txID, transactionID)
       } else if (toChainID === 4 || toChainID === 44) {
-        confirmToSNTransaction(txID, transactionID, toChainID)
+        confirmToSNTransaction(txID, transactionID, toChainID, makerAddress)
+          .then((success) => {
+            success === false && response.rollback();
+          })
       } else if (toChainID === 8 || toChainID === 88) {
         console.warn({ toChainID, toChain, txID, transactionID })
         // confirmToSNTransaction(txID, transactionID, toChainID)
@@ -2084,7 +2095,10 @@ export async function sendTransaction(
       try {
         // doSms(alert)
       } catch (error) {
-        errorLogger.error(`[${transactionID}] sendTransactionErrorMessage =`, error)
+        errorLogger.error(
+          `[${transactionID}] sendTransactionErrorMessage =`,
+          error
+        )
       }
     }
   })
