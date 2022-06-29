@@ -284,7 +284,9 @@ export default abstract class BasetWatch implements IChainWatch {
         currentBlockHeight,
         latestHeight,
         (blockNumber: number, txmap: AddressMapTransactions) => {
-          this.setRpcLastBlockHeight = blockNumber
+          if (blockNumber && blockNumber > 0) {
+            this.setRpcLastBlockHeight = blockNumber
+          }
           if (txmap && txmap.size > 0) {
             txmap.forEach(async (txlist, address) => {
               this.pushMessage(address, txlist)
@@ -304,6 +306,11 @@ export default abstract class BasetWatch implements IChainWatch {
           `[${this.chain.chainConfig.name}] rpcScan End of scan result：`,
           result
         )
+      return result
+    }
+    return {
+      start: currentBlockHeight,
+      end: latestHeight,
     }
   }
 }
