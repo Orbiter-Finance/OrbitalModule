@@ -14,11 +14,11 @@ import { getAmountToSend } from '../util/maker'
 import { CHAIN_INDEX } from '../util/maker/core'
 import { DydxHelper } from './dydx/dydx_helper'
 import { IMXHelper } from './immutablex/imx_helper'
+import { equals } from 'orbiter-chaincore/src/utils/core'
 import {
   getNewMarketList,
   groupWatchAddressByChain,
   IMarket,
-  newExpanPool,
 } from '../util/maker/new_maker'
 import {
   getAmountFlag,
@@ -28,15 +28,9 @@ import {
 } from './maker'
 import { getMakerPullStart } from './setting'
 import BobaService from './boba/boba_service'
-import { ITransaction, TransactionStatus } from '../chainCore/src/types'
-import {
-  equals,
-  getChainByChainId,
-  getChainByInternalId,
-} from '../chainCore/src/utils'
-import logger from '../chainCore/src/utils/logger'
-import { equal } from 'assert'
+import { core, chains } from 'orbiter-chaincore/src/utils'
 import { makerConfig } from '../config'
+import { ITransaction, TransactionStatus } from 'orbiter-chaincore/src/types'
 const repositoryMakerNode = (): Repository<MakerNode> => {
   return Core.db.getRepository(MakerNode)
 }
@@ -438,7 +432,7 @@ export class ServiceMakerPull {
     const fromAddress = makerPull.fromAddress.toLowerCase()
     const toAddress = makerPull.toAddress.toLowerCase()
     // if maker out
-    if (equals(fromAddress, makerAddress)) {
+    if (core.equals(fromAddress, makerAddress)) {
       // maker to user
       let targetMP = await repositoryMakerPull().findOne(
         {
@@ -464,17 +458,17 @@ export class ServiceMakerPull {
               ? 'georli-alpha'
               : 'mainnet-alpha'
           ]
-          let mapL2MakerAddress:string|undefined;
-          for (const L1Address in starknetL1MapL2) {
-            if (equals(makerAddress, L1Address)) {
-              mapL2MakerAddress = starknetL1MapL2[L1Address];
-            } else if (equals(makerAddress, starknetL1MapL2[L1Address])) {
-              mapL2MakerAddress = L1Address;
-            }
-            if (mapL2MakerAddress) {
-              break;
-            }
+        let mapL2MakerAddress: string | undefined
+        for (const L1Address in starknetL1MapL2) {
+          if (equals(makerAddress, L1Address)) {
+            mapL2MakerAddress = starknetL1MapL2[L1Address]
+          } else if (equals(makerAddress, starknetL1MapL2[L1Address])) {
+            mapL2MakerAddress = L1Address
           }
+          if (mapL2MakerAddress) {
+            break
+          }
+        }
         targetMP = await repositoryMakerPull().findOne(
           {
             makerSender: fromAddress, //  same makerAddress
@@ -513,13 +507,9 @@ export class ServiceMakerPull {
             state: targetMP.tx_status == 'finalized' ? 3 : 2,
           }
         )
-      } else {
-        logger.error(
-          `Collection transaction, user transfer targetMP  not found:id:${makerPull.id},chainId:${makerPull.chainId},amount_flag:${makerPull.amount_flag},txHash${makerPull.txHash}`
-        )
       }
     }
-    if (equals(toAddress, makerAddress)) {
+    if (core.equals(toAddress, makerAddress)) {
       // user to maker
       // when amount_flag not in CHAIN_INDEX, it cann't identify toChain
       if (!CHAIN_INDEX[makerPull.amount_flag]) {
@@ -536,7 +526,7 @@ export class ServiceMakerPull {
       if ([4, 44].includes(makerPull.chainId)) {
         const starknetL1MapL2 = this.getL1ToL2Mapping()
         for (const L1Addr in starknetL1MapL2) {
-          if (equals(makerAddress, starknetL1MapL2[L1Addr])) {
+          if (core.equals(makerAddress, starknetL1MapL2[L1Addr])) {
             targetMakerPool = await getTargetMakerPool(
               L1Addr,
               makerPull.tokenAddress,
@@ -576,18 +566,24 @@ export class ServiceMakerPull {
       const makerList = await getNewMarketList()
       const marketItem = makerList.find(
         (m) =>
-          equals(m.fromChain.id, String(makerPull.chainId)) &&
-          equals(String(m.toChain.id), makerPull.amount_flag) &&
-          equals(m.fromChain.tokenAddress, String(makerPull.tokenAddress)) &&
-          equals(m.toChain.symbol, makerPull.symbol)
+          core.equals(m.fromChain.id, String(makerPull.chainId)) &&
+          core.equals(String(m.toChain.id), makerPull.amount_flag) &&
+          core.equals(
+            m.fromChain.tokenAddress,
+            String(makerPull.tokenAddress)
+          ) &&
+          core.equals(m.toChain.symbol, makerPull.symbol)
       )
       if (!marketItem) {
         accessLogger.error(
           `[newCompareData] The transaction in which the user sends funds to the merchant address is scanned, but the transaction pair does not exist ${makerPull.txHash}`
         )
-        return;
+        return
       }
-      if (['4', '44'].includes(marketItem.fromChain.id) || ['4', '44'].includes(marketItem.toChain.id)) {
+      if (
+        ['4', '44'].includes(marketItem.fromChain.id) ||
+        ['4', '44'].includes(marketItem.toChain.id)
+      ) {
         _mp = await repositoryMakerPull().findOne({
           chainId: Number(makerPull.amount_flag),
           makerAddress: makerPull.makerSender,
@@ -1850,7 +1846,7 @@ export class ServiceMakerPull {
         )
         continue
       }
-      const chainConfig = await getChainByChainId(tx.chainId)
+      const chainConfig = await chains.getChainByChainId(tx.chainId)
       const value = tx.value.toString()
       const txChainId = Number(chainConfig.internalId)
       let amount_flag = getAmountFlag(txChainId, value)
@@ -1862,7 +1858,7 @@ export class ServiceMakerPull {
       // const marketConfig = makerList.find(m => equal(String(m.fromChain.id), chainConfig.internalId) && equals(m.fromChain.symbol, tx.symbol) && equals(m.fromChain.tokenAddress, String(tx.tokenAddress)))
       if (
         makerAddressList[chainConfig.internalId].find((address) =>
-          equals(address, tx.to)
+          core.equals(address, tx.to)
         )
       ) {
         makerAddress = tx.to
@@ -1870,7 +1866,7 @@ export class ServiceMakerPull {
       } else if (
         // maker send user
         makerAddressList[chainConfig.internalId].find((address) =>
-          equals(address, tx.from)
+          core.equals(address, tx.from)
         )
       ) {
         makerAddress = tx.from
@@ -1924,13 +1920,13 @@ export class ServiceMakerPull {
       } else if (makerPull.makerAddress === makerPull.toAddress) {
         // user send to maker
         makerPull.userReceive = makerPull.fromAddress
-        const toChain = getChainByInternalId(String(amount_flag))
+        const toChain = chains.getChainByInternalId(String(amount_flag))
         const marketItem = makerList.find(
           (m) =>
-            equals(m.fromChain.id, String(txChainId)) &&
-            equals(String(m.toChain.id), toChain.internalId) &&
-            equals(m.fromChain.tokenAddress, String(tx.tokenAddress)) &&
-            equals(m.toChain.symbol, tx.symbol)
+            core.equals(m.fromChain.id, String(txChainId)) &&
+            core.equals(String(m.toChain.id), toChain.internalId) &&
+            core.equals(m.fromChain.tokenAddress, String(tx.tokenAddress)) &&
+            core.equals(m.toChain.symbol, tx.symbol)
         )
         if (!marketItem) {
           accessLogger.error(

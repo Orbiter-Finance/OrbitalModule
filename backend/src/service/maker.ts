@@ -1,6 +1,6 @@
 import { BigNumber } from 'bignumber.js'
 import { Repository } from 'typeorm'
-import { padStart } from '../chainCore/src/utils'
+import { equals, padStart } from 'orbiter-chaincore/src/utils/core'
 import { makerConfig } from '../config'
 import { ServiceError, ServiceErrorCodes } from '../error/service'
 import { MakerNode } from '../model/maker_node'
@@ -68,8 +68,18 @@ export async function statisticsProfit(
 
   const makerList = await getMakerList()
   for (const item of makerList) {
-    if (!equalsIgnoreCase(item.makerAddress, makerNode.makerAddress)) {
-      continue
+    let makerAddress =item.makerAddress;
+    if (['4','44'].includes(makerNode.fromChain)) {
+      const addrMap = makerConfig.starknetL1MapL2[makerNode.toChain =='44' ? 'georli-alpha':'mainnet-alpha'];
+      for(let L1Addr in addrMap) {
+        if (equals(L1Addr, makerAddress)) {
+          makerAddress = addrMap[L1Addr];
+        }
+      }
+    }
+  
+    if (!equalsIgnoreCase(makerAddress, makerNode.makerAddress)) {
+        continue
     }
 
     if (

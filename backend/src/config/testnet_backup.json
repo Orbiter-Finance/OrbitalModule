@@ -14,11 +14,9 @@
       "decimals": 18,
       "address": "0x0000000000000000000000000000000000000000"
     },
-    "rpc": [
-      "wss://eth-rinkeby.alchemyapi.io/v2/{You Key}"
-    ],
+    "rpc": ["wss://eth-rinkeby.alchemyapi.io/v2/{You Key}"],
     "watch": ["rpc", "api"],
-    "contracts": ["0x783703C20dF627893952d59DF40f556A172d1719"],
+    "contracts": [],
     "tokens": [
       {
         "name": "USD Coin",
@@ -45,7 +43,7 @@
     },
     "rpc": ["wss://arb-rinkeby.g.alchemy.com/v2/{You Key}"],
     "watch": ["rpc", "api"],
-    "contracts": ["0x721fBB2C2C9cdFa5547feE6b683949c20F175457"],
+    "contracts": [],
     "tokens": [
       {
         "name": "USD Coin",
@@ -113,7 +111,7 @@
     "internalId": "33",
     "name": "ZKSync Rinkeby",
     "nativeCurrency": {
-      "id":0,
+      "id": 0,
       "name": "Ether",
       "symbol": "ETH",
       "decimals": 18,
@@ -124,7 +122,7 @@
     "contracts": [],
     "tokens": [
       {
-        "id":2,
+        "id": 2,
         "name": "USDC",
         "symbol": "USDC",
         "decimals": 6,
@@ -141,9 +139,7 @@
     "networkId": "80001",
     "internalId": "66",
     "name": "Polygon Mumbai Testnet",
-    "rpc": [
-      "wss://polygon-mumbai.g.alchemy.com/v2/{You Key}"
-    ],
+    "rpc": ["wss://polygon-mumbai.g.alchemy.com/v2/{You Key}"],
     "nativeCurrency": {
       "name": "MATIC",
       "symbol": "MATIC",
@@ -151,7 +147,7 @@
       "address": "0x0000000000000000000000000000000000000000"
     },
     "watch": ["api", "rpc"],
-    "contracts": ["0x40eC19690ebEd534e9b9C58e341727028cF143c0"],
+    "contracts": [],
     "tokens": [
       {
         "name": "Wrapped Ether",
@@ -184,7 +180,7 @@
     },
     "rpc": ["wss://opt-kovan.g.alchemy.com/v2/{You Key}"],
     "watch": ["api", "rpc"],
-    "contracts": ["0x2200a79aDdFE2EFd7bDe34300f4C8FE902E31d39"],
+    "contracts": [],
     "tokens": []
   },
   {
@@ -193,7 +189,7 @@
       "key": ""
     },
     "chainId": "dydx_test",
-    "networkId": "5",
+    "networkId": "dydx",
     "internalId": "511",
     "name": "Dydx Testnet",
     "nativeCurrency": {
@@ -251,7 +247,7 @@
     "internalId": "99",
     "name": "Loopring Testnet",
     "nativeCurrency": {
-      "id":0,
+      "id": 0,
       "name": "Ethereum",
       "symbol": "ETH",
       "decimals": 0,
@@ -295,7 +291,7 @@
     "internalId": "512",
     "name": "ZKSpace Testnet",
     "nativeCurrency": {
-      "id":0,
+      "id": 0,
       "name": "Ether",
       "symbol": "ETH",
       "decimals": 18,
@@ -314,10 +310,12 @@
     "networkId": "goerli-alpha",
     "internalId": "44",
     "name": "Starknet Goerli Testnet",
-    "debug": false,
-    "contracts": ["0x0457bf9a97e854007039c43a6cc1a81464bd2a4b907594dabc9132c162563eb3"],
+    "debug": true,
+    "contracts": [
+      "0x0457bf9a97e854007039c43a6cc1a81464bd2a4b907594dabc9132c162563eb3"
+    ],
     "nativeCurrency": {
-      "id":0,
+      "id": 0,
       "name": "Ether",
       "symbol": "ETH",
       "decimals": 18,

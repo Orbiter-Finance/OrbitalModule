@@ -1,16 +1,7 @@
-import { uniq } from './../../chainCore/src/utils'
+import { ScanChainMain,pubSub,chains } from 'orbiter-chaincore';
+import {core as chainCoreUtil} from 'orbiter-chaincore/src/utils'
 import { getMakerList, sendTransaction } from '.'
-import { ScanChainMain } from '../../chainCore'
-import { ITransaction, TransactionStatus } from '../../chainCore/src/types'
 import * as orbiterCore from './core'
-import {
-  equals,
-  getChainByChainId,
-  getChainByInternalId,
-  groupBy,
-  flatten,
-  isEmpty,
-} from '../../chainCore/src/utils'
 import BigNumber from 'bignumber.js'
 import { newMakeTransactionID } from '../../service/maker'
 import { accessLogger, errorLogger } from '../logger'
@@ -18,11 +9,11 @@ import { Core } from '../core'
 import { Repository } from 'typeorm'
 import { MakerNode } from '../../model/maker_node'
 import { makerConfig } from '../../config'
-import mainnetChains from '../../chainCore/chains.json'
-import testnetChains from '../../chainCore/testnet.json'
+import mainnetChains from '../../config/chains.json'
+import testnetChains from '../../config/testnet.json'
 import Keyv from 'keyv'
-import KeyvFile from '../../chainCore/src/utils/keyvFile'
-import dayjs from 'dayjs'
+import KeyvFile from 'orbiter-chaincore/src/utils/keyvFile'
+import { ITransaction, TransactionStatus } from 'orbiter-chaincore/src/types'
 const allChainsConfig = [...mainnetChains, ...testnetChains]
 const repositoryMakerNode = (): Repository<MakerNode> => {
   return Core.db.getRepository(MakerNode)
@@ -127,7 +118,7 @@ export async function startNewMakerTrxPull() {
         LastPullTxMap.set(pullKey, Date.now())
       }
     })
-    scanChain.mq.subscribe(`${intranetId}:txlist`, subscribeNewTransaction)
+    pubSub.subscribe(`${intranetId}:txlist`, subscribeNewTransaction)
     scanChain.startScanChain(intranetId, convertMakerList[intranetId])
   }
 }
@@ -135,13 +126,13 @@ async function isWatchAddress(address: string) {
   const makerList = await getNewMarketList()
   return (
     makerList.findIndex(
-      (row) => equals(row.recipient, address) || equals(row.sender, address)
+      (row) => chainCoreUtil.equals(row.recipient, address) || chainCoreUtil.equals(row.sender, address)
     ) != -1
   )
 }
 async function subscribeNewTransaction(newTxList: Array<ITransaction>) {
   // Transaction received
-  const groupData = groupBy(newTxList, 'chainId')
+  const groupData = chainCoreUtil.groupBy(newTxList, 'chainId')
   for (const chainId in groupData) {
     const txList: Array<ITransaction> = groupData[chainId]
     for (const tx of txList) {
@@ -152,13 +143,13 @@ async function subscribeNewTransaction(newTxList: Array<ITransaction>) {
         continue
       }
       accessLogger.info(`subscribeNewTransaction：`, JSON.stringify(tx))
-      if (equals(tx.to, tx.from) || tx.value.lte(0)) {
+      if (chainCoreUtil.equals(tx.to, tx.from) || tx.value.lte(0)) {
         accessLogger.error(
           `subscribeNewTransaction to equals from | value <= 0 hash:${tx.hash}`
         )
         continue
       }
-      const fromChain = await getChainByChainId(tx.chainId)
+      const fromChain = await chains.getChainByChainId(tx.chainId)
       // check send
       if (!fromChain) {
         accessLogger.error(
@@ -227,11 +218,11 @@ async function subscribeNewTransaction(newTxList: Array<ITransaction>) {
         continue
       }
       const toChainInternalId = Number(result.pText) - 9000
-      const toChain = getChainByInternalId(String(toChainInternalId))
+      const toChain = chains.getChainByInternalId(String(toChainInternalId))
       const fromTokenInfo = fromChain.tokens.find((row) =>
-        equals(row.address, String(tx.tokenAddress))
+        chainCoreUtil.equals(row.address, String(tx.tokenAddress))
       )
-      if (isEmpty(fromTokenInfo) || !fromTokenInfo?.name) {
+      if (chainCoreUtil.isEmpty(fromTokenInfo) || !fromTokenInfo?.name) {
         accessLogger.error(
           `[${transactionID}] Refund The query currency information does not exist: ` +
             JSON.stringify(tx)
@@ -241,10 +232,13 @@ async function subscribeNewTransaction(newTxList: Array<ITransaction>) {
       const newMakerList = await getNewMarketList()
       const marketItem = newMakerList.find(
         (m) =>
-          equals(String(m.fromChain.id), fromChain.internalId) &&
-          equals(String(m.toChain.id), toChain.internalId) &&
-          equals(m.fromChain.tokenAddress, String(tx.tokenAddress)) &&
-          equals(m.toChain.symbol, tx.symbol)
+          chainCoreUtil.equals(String(m.fromChain.id), fromChain.internalId) &&
+          chainCoreUtil.equals(String(m.toChain.id), toChain.internalId) &&
+          chainCoreUtil.equals(
+            m.fromChain.tokenAddress,
+            String(tx.tokenAddress)
+          ) &&
+          chainCoreUtil.equals(m.toChain.symbol, tx.symbol)
       )
       if (!marketItem) {
         accessLogger.error(
@@ -252,13 +246,13 @@ async function subscribeNewTransaction(newTxList: Array<ITransaction>) {
         )
         continue
       }
-      if (!equals(tx.to, marketItem.recipient)) {
+      if (!chainCoreUtil.equals(tx.to, marketItem.recipient)) {
         accessLogger.error(
           `The recipient of the transaction is not a maker address ${tx.hash}`
         )
         continue
       }
-     
+
       if (!['9', '99'].includes(fromChain.internalId)) {
         const checkAmountResult = checkAmount(
           Number(fromChain.internalId),
@@ -288,11 +282,13 @@ export async function confirmTransactionSendMoneyBack(
   const toChainID = Number(market.toChain.id)
   const toChainName = market.toChain.name
   const makerAddress = market.sender
-  if (isEmpty(makerConfig.privateKeys[makerAddress.toLowerCase()])) {
+  if (
+    chainCoreUtil.isEmpty(makerConfig.privateKeys[makerAddress.toLowerCase()])
+  ) {
     accessLogger.error(
       `[${transactionID}] Your private key is not injected into the coin dealer address,makerAddress =${makerAddress}`
     )
-    return;
+    return
   }
   const cache = getCacheClient(String(fromChainID))
   const chainTransferMap = transfers.get(String(fromChainID))
@@ -377,7 +373,7 @@ export async function confirmTransactionSendMoneyBack(
 
 export async function getNewMarketList(): Promise<Array<IMarket>> {
   const makerList = await getMakerList()
-  return flatten(
+  return chainCoreUtil.flatten(
     makerList.map((row) => {
       return newExpanPool(row)
     })
@@ -386,18 +382,20 @@ export async function getNewMarketList(): Promise<Array<IMarket>> {
 export function groupWatchAddressByChain(makerList: Array<IMarket>): {
   [key: string]: Array<string>
 } {
-  const chainIds = uniq(
-    flatten(makerList.map((row) => [row.fromChain.id, row.toChain.id]))
+  const chainIds = chainCoreUtil.uniq(
+    chainCoreUtil.flatten(
+      makerList.map((row) => [row.fromChain.id, row.toChain.id])
+    )
   )
   const chain = {}
   for (const id of chainIds) {
-    const recipientAddress = uniq(
+    const recipientAddress = chainCoreUtil.uniq(
       makerList.filter((m) => m.fromChain.id === id).map((m) => m.recipient)
     )
-    const senderAddress = uniq(
+    const senderAddress = chainCoreUtil.uniq(
       makerList.filter((m) => m.toChain.id === id).map((m) => m.sender)
     )
-    chain[id] = uniq([...senderAddress, ...recipientAddress])
+    chain[id] = chainCoreUtil.uniq([...senderAddress, ...recipientAddress])
   }
   return chain
 }

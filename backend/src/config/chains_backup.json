@@ -2,7 +2,7 @@
   {
     "api": {
       "url": "https://api.etherscan.io/api",
-      "key": "{You Key}"
+      "key": "{Your Key}"
     },
     "chainId": "1",
     "networkId": "1",
@@ -14,7 +14,7 @@
       "decimals": 18,
       "address": "0x0000000000000000000000000000000000000000"
     },
-    "rpc": ["wss://eth-mainnet.alchemyapi.io/v2/{You Key}"],
+    "rpc": ["wss://eth-mainnet.alchemyapi.io/v2/{Your Key}"],
     "watch": ["rpc", "api"],
     "contracts": ["0xd9d74a29307cc6fc8bf424ee4217f1a587fbc8dc"],
     "tokens": [
@@ -35,11 +35,12 @@
   {
     "api": {
       "url": "http://api.arbiscan.io/api",
-      "key": "{You Key}"
+      "key": "{Your Key}"
     },
     "chainId": "42161",
     "networkId": "42161",
     "internalId": "2",
+    "debug": false,
     "name": "Arbitrum One",
     "nativeCurrency": {
       "name": "Ether",
@@ -47,7 +48,7 @@
       "decimals": 18,
       "address": "0x0000000000000000000000000000000000000000"
     },
-    "rpc": ["wss://arb1.arbitrum.io/ws"],
+    "rpc": ["wss://arb-mainnet.g.alchemy.com/v2/{Your Key}"],
     "watch": ["rpc", "api"],
     "contracts": ["0xd9d74a29307cc6fc8bf424ee4217f1a587fbc8dc"],
     "tokens": [
@@ -88,7 +89,7 @@
   {
     "api": {
       "url": "https://andromeda-explorer.metis.io/api",
-      "key": ""
+      "key": "{Your Key}"
     },
     "chain": "ETH",
     "chainId": "1088",
@@ -113,7 +114,7 @@
       },
       {
         "name": "USDC Token",
-        "symbol": "USDC",
+        "symbol": "m.USDC",
         "decimals": 6,
         "address": "0xEA32A96608495e54156Ae48931A7c20f0dcc1a21"
       }
@@ -128,6 +129,7 @@
     "networkId": "zksync",
     "internalId": "3",
     "name": "ZKSync Mainnet",
+    "debug": false,
     "nativeCurrency": {
       "id": 0,
       "name": "Ether",
@@ -148,7 +150,7 @@
       },
       {
         "id": 4,
-        "name":"USDT",
+        "name": "USDT",
         "symbol": "USDT",
         "decimals": 6,
         "address": "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -158,13 +160,13 @@
   {
     "api": {
       "url": "https://api.polygonscan.com/api",
-      "key": "{You Key}"
+      "key": "{Your Key}"
     },
     "chainId": "137",
     "networkId": "137",
     "internalId": "6",
     "name": "Polygon Mainnet",
-    "rpc": ["wss://polygon-mainnet.g.alchemy.com/v2/{You Key}"],
+    "rpc": ["https://polygon-mainnet.g.alchemy.com/v2/{Your Key}"],
     "nativeCurrency": {
       "name": "MATIC",
       "symbol": "MATIC",
@@ -172,7 +174,7 @@
       "address": "0x0000000000000000000000000000000000000000"
     },
     "watch": ["api", "rpc"],
-    "contracts": [],
+    "contracts": ["0xd9d74a29307cc6fc8bf424ee4217f1a587fbc8dc"],
     "tokens": [
       {
         "name": "Wrapped Ether",
@@ -197,7 +199,7 @@
   {
     "api": {
       "url": "https://api-optimistic.etherscan.io/api",
-      "key": "{You Key}"
+      "key": "{Your Key}"
     },
     "chainId": "10",
     "networkId": "10",
@@ -209,9 +211,9 @@
       "decimals": 18,
       "address": "0x0000000000000000000000000000000000000000"
     },
-    "rpc": ["wss://opt-mainnet.g.alchemy.com/v2/{You Key}"],
+    "rpc": ["wss://opt-mainnet.g.alchemy.com/v2/{Your Key}"],
     "watch": ["api", "rpc"],
-    "contracts": [],
+    "contracts": ["0xd9d74a29307cc6fc8bf424ee4217f1a587fbc8dc"],
     "tokens": [
       {
         "name": "USD Coin",
@@ -262,7 +264,7 @@
       "key": ""
     },
     "chainId": "dydx",
-    "networkId": "1",
+    "networkId": "dydx",
     "internalId": "11",
     "name": "Dydx Mainnet",
     "nativeCurrency": {
@@ -313,7 +315,7 @@
   {
     "api": {
       "url": "https://api3.loopring.io/api/v3",
-      "key": "{You Key}"
+      "key": "{Your Key}"
     },
     "chainId": "loopring",
     "networkId": "1",
@@ -340,10 +342,12 @@
     "networkId": "mainnet-alpha",
     "internalId": "4",
     "name": "Starknet Goerli Mainnet",
-    "debug": true,
-    "contracts": ["0x0457bf9a97e854007039c43a6cc1a81464bd2a4b907594dabc9132c162563eb3"],
+    "debug": false,
+    "contracts": [
+      "0x0173f81c529191726c6e7287e24626fe24760ac44dae2a1f7e02080230f8458b"
+    ],
     "nativeCurrency": {
-      "id":0,
+      "id": 0,
       "name": "Ether",
       "symbol": "ETH",
       "decimals": 18,

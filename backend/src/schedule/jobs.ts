@@ -1,5 +1,5 @@
-import { BigNumber } from 'bignumber.js'
 import schedule from 'node-schedule'
+import { errorLogger } from '../util/logger'
 import { makerConfig } from '../config'
 import * as coinbase from '../service/coinbase'
 import * as serviceMaker from '../service/maker'
@@ -7,12 +7,11 @@ import { ServiceMakerPull } from '../service/maker_pull'
 import * as serviceMakerWealth from '../service/maker_wealth'
 import { doBalanceAlarm } from '../service/setting'
 import { Core } from '../util/core'
-import { accessLogger, errorLogger } from '../util/logger'
 import { expanPool, getMakerList } from '../util/maker'
 import { CHAIN_INDEX } from '../util/maker/core'
-import { ScanChainMain } from '../chainCore'
-import mainnetChains from '../chainCore/chains.json'
-import testnetChains from '../chainCore/testnet.json'
+import { ScanChainMain,pubSub,chainService } from 'orbiter-chaincore'
+import mainnetChains from '../config/chains.json'
+import testnetChains from '../config/testnet.json'
 import {
   getNewMarketList,
   groupWatchAddressByChain,
@@ -278,7 +277,7 @@ export async function startNewDashboardPull() {
   const scanChain = new ScanChainMain(allChainsConfig as any)
   const serviceMakerPull = new ServiceMakerPull(0, '', '', '')
   for (const intranetId in convertMakerList) {
-    scanChain.mq.subscribe(`${intranetId}:txlist`, async (result) => {
+    pubSub.subscribe(`${intranetId}:txlist`, async (result) => {
       return await serviceMakerPull.handleNewScanChainTrx(result, makerList)
     })
     scanChain.startScanChain(intranetId, convertMakerList[intranetId])

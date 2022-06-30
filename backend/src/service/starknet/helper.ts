@@ -16,7 +16,7 @@ import { makerConfig } from '../../config'
 import { OfflineAccount } from './account'
 import { compileCalldata } from 'starknet/dist/utils/stark'
 import Keyv from 'keyv'
-import KeyvFile from '../../chainCore/src/utils/keyvFile'
+import KeyvFile from 'orbiter-chaincore/src/utils/keyvFile'
 import { max } from 'lodash'
 export type starknetNetwork = 'mainnet-alpha' | 'georli-alpha'
 

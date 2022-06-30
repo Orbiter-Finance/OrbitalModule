@@ -165,6 +165,15 @@ export default function (router: KoaRouter<DefaultState, Context>) {
       // Profit statistics
       // (fromAmount - toAmount) / token's rate - gasAmount/gasCurrency's rate
       item['profitUSD'] = (await serviceMaker.statisticsProfit(item)).toFixed(3)
+    
+      //
+      if (item['fromChain'] === '4' || item['fromChain'] === '44') {
+        item['userAddress'] = item['fromExt']['ext']
+      }
+      if (item['toChain'] === '4' || item['toChain'] === '44') {
+        item['userAddress'] = item['fromExt']['value']
+      }
+      
     }
 
     restful.json(list)
