@@ -16,6 +16,7 @@ const MAX_BITS = {
   dydx: 28,
   boba: 256,
   zkspace: 35,
+  zksync2: 256,
 }
 
 export const CHAIN_INDEX = {
@@ -43,6 +44,7 @@ export const CHAIN_INDEX = {
   512: 'zkspace',
   13: 'boba',
   513: 'boba',
+  514: "zksync2"
 }
 
 export const SIZE_OP = {
@@ -144,7 +146,6 @@ function isAmountValid(chain, amount) {
 }
 
 function getToAmountFromUserAmount(userAmount, selectMakerInfo, isWei) {
-  console.log("userAmount", userAmount, userAmount.toFormat(), selectMakerInfo, isWei);
   userAmount = performUserAmountLegality(userAmount, selectMakerInfo);
   let toAmount_tradingFee = new BigNumber(userAmount).minus(
     new BigNumber(selectMakerInfo.tradingFee)
