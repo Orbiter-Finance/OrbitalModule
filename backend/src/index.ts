@@ -123,3 +123,14 @@ const main = async () => {
   }
 }
 main()
+
+process.on('uncaughtException', (err: Error) => {
+  accessLogger.error('Global Uncaught exception:', err)
+})
+
+process.on('unhandledRejection', (err: Error, promise) => {
+  accessLogger.error(
+    'There are failed functions where promise is not captured：',
+    err.message
+  )
+})

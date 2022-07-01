@@ -18,3 +18,4 @@ backend/src/config/maker.ts
 backend/src/chainCore/chains.json
 backend/src/chainCore/testnet.json
 chainlogs/
+runtime/

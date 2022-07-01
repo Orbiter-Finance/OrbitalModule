@@ -21,8 +21,9 @@ services:
       DB_NAME: '${DB_NAME}'
     volumes:
       - './backend/chainlogs:/app/chainlogs'
-      - './backend/logs:/app/logs'
       - './backend/cache:/app/cache'
+      - './backend/logs:/app/logs'
+      - './backend/runtime:/app/runtime'
     #   - './backend:/app'
     ports:
       - '3002:3002'

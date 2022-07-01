@@ -1839,118 +1839,127 @@ export class ServiceMakerPull {
     const promiseMethods: (() => Promise<unknown>)[] = []
     const makerAddressList = groupWatchAddressByChain(makerList)
     for (const tx of txlist) {
-      if (tx.value.lte(0)) {
-        accessLogger.error(
-          'Transaction amount is incorrect, please check：',
-          JSON.stringify(tx)
-        )
-        continue
-      }
-      const chainConfig = await chains.getChainByChainId(tx.chainId)
-      const value = tx.value.toString()
-      const txChainId = Number(chainConfig.internalId)
-      let amount_flag = getAmountFlag(txChainId, value)
-      if ([9, 99].includes(txChainId) && tx.extra) {
-        amount_flag = (<any>tx.extra.memo % 9000) + ''
-      }
-
-      let makerAddress: string | undefined = ''
-      // const marketConfig = makerList.find(m => equal(String(m.fromChain.id), chainConfig.internalId) && equals(m.fromChain.symbol, tx.symbol) && equals(m.fromChain.tokenAddress, String(tx.tokenAddress)))
-      if (
-        makerAddressList[chainConfig.internalId].find((address) =>
-          core.equals(address, tx.to)
-        )
-      ) {
-        makerAddress = tx.to
-        //
-      } else if (
-        // maker send user
-        makerAddressList[chainConfig.internalId].find((address) =>
-          core.equals(address, tx.from)
-        )
-      ) {
-        makerAddress = tx.from
-      }
-      if (!makerAddress) {
-        accessLogger.error(
-          `Transaction pair maker address not found ${chainConfig.name} ${tx.hash}  market:${chainConfig.internalId}`
-        )
-        continue
-      }
-      // market list
-      const backTx = JSON.stringify(tx)
-      const makerPull: Partial<MakerPull> = {
-        chainId: Number(chainConfig.internalId),
-        makerAddress: makerAddress,
-        tokenAddress: tx.tokenAddress || '',
-        data: backTx,
-        amount: value,
-        amount_flag,
-        nonce: String(tx.nonce),
-        fromAddress: tx.from,
-        toAddress: tx.to,
-        txBlock: String(tx.blockNumber),
-        txHash: tx.hash,
-        txExt: this.getTxExtFromInput(String(tx.input)),
-        txTime: new Date(tx.timestamp * 1000),
-        gasCurrency: tx.feeToken,
-        gasAmount: String(tx.fee),
-        tx_status: 'rejected',
-        symbol: tx.symbol,
-      }
-
-      if (tx.status === TransactionStatus.COMPLETE) {
-        makerPull.tx_status = 'finalized'
-      } else if (tx.status === TransactionStatus.PENDING) {
-        makerPull.tx_status = 'committed'
-      } else if (tx.status === TransactionStatus.Fail) {
-        makerPull.tx_status = 'rejected'
-      }
-      if (
-        [3, 33, 8, 88, 12, 512].includes(Number(makerPull.chainId)) &&
-        tx.status === TransactionStatus.PENDING
-      ) {
-        makerPull.tx_status = 'finalized'
-      }
-      accessLogger.info('Processing transactions：', JSON.stringify(makerPull))
-      if (makerPull.makerAddress === makerPull.fromAddress) {
-        // maker send to user
-        makerPull.userReceive = makerPull.toAddress
-        makerPull.makerSender = makerPull.fromAddress
-      } else if (makerPull.makerAddress === makerPull.toAddress) {
-        // user send to maker
-        makerPull.userReceive = makerPull.fromAddress
-        const toChain = chains.getChainByInternalId(String(amount_flag))
-        const marketItem = makerList.find(
-          (m) =>
-            core.equals(m.fromChain.id, String(txChainId)) &&
-            core.equals(String(m.toChain.id), toChain.internalId) &&
-            core.equals(m.fromChain.tokenAddress, String(tx.tokenAddress)) &&
-            core.equals(m.toChain.symbol, tx.symbol)
-        )
-        if (!marketItem) {
+      // accessLogger.info('sub tx：', tx.hash)
+      try {
+        if (tx.value.lte(0)) {
           accessLogger.error(
-            `The transaction in which the user sends funds to the merchant address is scanned, but the transaction pair does not exist ${tx.hash}`
+            'Transaction amount is incorrect, please check：',
+            JSON.stringify(tx)
           )
           continue
         }
-        makerPull.makerSender = marketItem.sender
-        if (['4', '44'].includes(marketItem.fromChain.id)) {
-          makerPull.txExt = <any>{ ext: tx.extra['ext'] }
-          makerPull.userReceive = tx.extra['ext']
-        } else if (['4', '44'].includes(marketItem.toChain.id)) {
-          makerPull.userReceive = makerPull.txExt?.value
+        const chainConfig = await chains.getChainByChainId(tx.chainId)
+        const value = tx.value.toString()
+        const txChainId = Number(chainConfig.internalId)
+        let amount_flag = getAmountFlag(txChainId, value)
+        if ([9, 99].includes(txChainId) && tx.extra) {
+          amount_flag = (<any>tx.extra.memo % 9000) + ''
         }
-        //
+
+        let makerAddress: string | undefined = ''
+        // const marketConfig = makerList.find(m => equal(String(m.fromChain.id), chainConfig.internalId) && equals(m.fromChain.symbol, tx.symbol) && equals(m.fromChain.tokenAddress, String(tx.tokenAddress)))
+        if (
+          makerAddressList[chainConfig.internalId].find((address) =>
+            core.equals(address, tx.to)
+          )
+        ) {
+          makerAddress = tx.to
+          //
+        } else if (
+          // maker send user
+          makerAddressList[chainConfig.internalId].find((address) =>
+            core.equals(address, tx.from)
+          )
+        ) {
+          makerAddress = tx.from
+        }
+        if (!makerAddress) {
+          accessLogger.error(
+            `Transaction pair maker address not found ${chainConfig.name} ${tx.hash}  market:${chainConfig.internalId}`
+          )
+          continue
+        }
+        // market list
+        const backTx = JSON.stringify(tx)
+        const makerPull: Partial<MakerPull> = {
+          chainId: Number(chainConfig.internalId),
+          makerAddress: makerAddress,
+          tokenAddress: tx.tokenAddress || '',
+          data: backTx,
+          amount: value,
+          amount_flag,
+          nonce: String(tx.nonce),
+          fromAddress: tx.from,
+          toAddress: tx.to,
+          txBlock: String(tx.blockNumber),
+          txHash: tx.hash,
+          txExt: this.getTxExtFromInput(String(tx.input)),
+          txTime:new Date(Number(tx.timestamp) * 1000),
+          gasCurrency: tx.feeToken,
+          gasAmount: String(tx.fee),
+          tx_status: 'rejected',
+          symbol: tx.symbol,
+        }
+
+        if (tx.status === TransactionStatus.COMPLETE) {
+          makerPull.tx_status = 'finalized'
+        } else if (tx.status === TransactionStatus.PENDING) {
+          makerPull.tx_status = 'committed'
+        } else if (tx.status === TransactionStatus.Fail) {
+          makerPull.tx_status = 'rejected'
+        }
+        if (
+          [3, 33, 8, 88, 12, 512].includes(Number(makerPull.chainId)) &&
+          tx.status === TransactionStatus.PENDING
+        ) {
+          makerPull.tx_status = 'finalized'
+        }
+        accessLogger.info(
+          'Processing transactions：',
+          JSON.stringify(makerPull)
+        )
+        if (makerPull.makerAddress === makerPull.fromAddress) {
+          // maker send to user
+          makerPull.userReceive = makerPull.toAddress
+          makerPull.makerSender = makerPull.fromAddress
+        } else if (makerPull.makerAddress === makerPull.toAddress) {
+          // user send to maker
+          makerPull.userReceive = makerPull.fromAddress
+          const toChain = chains.getChainByInternalId(String(amount_flag))
+          const marketItem = makerList.find(
+            (m) =>
+              core.equals(m.fromChain.id, String(txChainId)) &&
+              core.equals(String(m.toChain.id), toChain.internalId) &&
+              core.equals(m.fromChain.tokenAddress, String(tx.tokenAddress)) &&
+              core.equals(m.toChain.symbol, tx.symbol)
+          )
+          if (!marketItem) {
+            accessLogger.error(
+              `The transaction in which the user sends funds to the merchant address is scanned, but the transaction pair does not exist ${tx.hash}`
+            )
+            continue
+          }
+          makerPull.makerSender = marketItem.sender
+          if (['4', '44'].includes(marketItem.fromChain.id)) {
+            makerPull.txExt = <any>{ ext: tx.extra['ext'] }
+            makerPull.userReceive = tx.extra['ext']
+          } else if (['4', '44'].includes(marketItem.toChain.id)) {
+            makerPull.userReceive = makerPull.txExt?.value
+          }
+          //
+        }
+        promiseMethods.push(async () => {
+          await savePull(<MakerPull>makerPull)
+          // compare
+          if (makerPull.tx_status != 'rejected') {
+            await this.newCompareData(<MakerPull>makerPull)
+          }
+        })
+      } catch (error) {
+        accessLogger.error(`Processing matching tx error: `,JSON.stringify(tx), error.message)
       }
-      promiseMethods.push(async () => {
-        await savePull(<MakerPull>makerPull)
-        // compare
-        if (makerPull.tx_status != 'rejected') {
-          await this.newCompareData(<MakerPull>makerPull)
-        }
-      })
     }
+
     await PromisePool.for(promiseMethods)
       .withConcurrency(10)
       .process(async (item) => await item())
