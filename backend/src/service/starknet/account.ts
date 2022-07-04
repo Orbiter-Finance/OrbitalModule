@@ -8,7 +8,7 @@ import {
   transaction,
   Transaction,
 } from 'starknet'
-const { toHex, bigNumberishArrayToDecimalStringArray } = number
+const { toHex, bigNumberishArrayToDecimalStringArray, toBN } = number
 const { fromCallsToExecuteCalldataWithNonce } = transaction
 import 'cross-fetch/polyfill';
 
@@ -40,13 +40,17 @@ export class OfflineAccount extends Account {
     if (!nonce) {
         throw new Error('Not Find Nonce Params')
     }
+    let fee = toBN(0.009 * 10**18);
     const { suggestedMaxFee } = await this.estimateFee(invocation)
+    if(suggestedMaxFee.gt(fee)) {
+      fee = suggestedMaxFee;
+    }
     const transactionDetail = {
       walletAddress: this.address,
       chainId: this.chainId,
       nonce: nonce,
       version: 0,
-      maxFee: suggestedMaxFee,
+      maxFee: fee,
     }
     return {
       type: 'INVOKE_FUNCTION',
@@ -60,7 +64,7 @@ export class OfflineAccount extends Account {
       signature: bigNumberishArrayToDecimalStringArray(
         await this.signer.signTransaction([invocation], transactionDetail)
       ),
-      max_fee: toHex(suggestedMaxFee),
+      max_fee: toHex(fee),
     }
   }
 }

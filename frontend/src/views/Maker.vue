@@ -348,6 +348,7 @@ import {
   watch,
 } from 'vue'
 import Web3 from 'web3'
+import { $env } from '../env'
 
 // mainnet > Mainnet, arbitrum > Arbitrum, zksync > zkSync
 const CHAIN_NAME_MAPPING = {
@@ -601,9 +602,18 @@ export default defineComponent({
         if (item.state != 1 || !item.needTo) {
           return
         }
-
+        let makerAddress =  item.makerAddress;
+        if (item.fromChain == '4' || item.fromChain === '44') {
+          let mapData:any = $env['starknetL1MapL2'][item.fromChain === '44' ? 'georli-alpha' : 'mainnet-alpha'];
+          for (const l1Addr in mapData) {
+            if (mapData[l1Addr].toLowerCase() === item.makerAddress) {
+              makerAddress = l1Addr;
+              break;
+            }
+          }
+        }
         await transferNeedTo(
-          item.makerAddress,
+          makerAddress,
           item.userAddress,
           item.needTo,
           item.fromExt

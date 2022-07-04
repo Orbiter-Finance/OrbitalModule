@@ -2,6 +2,15 @@ export const $env = {
   baseUrl: '',
   apiBaseUrl: 'http://iris_dashboard.orbiter.finance:3002/',
   credential: false,
+  starknetL1MapL2: {
+    'mainnet-alpha': {
+      '0x80c67432656d59144ceff962e8faf8926599bcf8': '0x07c57808b9cea7130c44aab2f8ca6147b04408943b48c6d8c3c83eb8cfdd8c0b',
+    },
+    'georli-alpha': {
+      '0x0043d60e87c5dd08c86c3123340705a1556c4719':
+        '0x033b88fc03a2ccb1433d6c70b73250d0513c6ee17a7ab61c5af0fbe16bd17a6e',
+    },
+  },
   localProvider: {
     1: 'https://mainnet.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad',
     2: 'https://arb-mainnet.g.alchemy.com/v2/ILj6pmkFfRO3KflhcnPxVFtuqZvwgkgr',
