@@ -14,7 +14,7 @@ import { getAmountToSend } from '../util/maker'
 import { CHAIN_INDEX } from '../util/maker/core'
 import { DydxHelper } from './dydx/dydx_helper'
 import { IMXHelper } from './immutablex/imx_helper'
-import { equals } from 'orbiter-chaincore/src/utils/core'
+import { equals, fix0xPadStartAddress } from 'orbiter-chaincore/src/utils/core'
 import {
   getNewMarketList,
   groupWatchAddressByChain,
@@ -549,7 +549,6 @@ export class ServiceMakerPull {
           makerPull.txTime
         )
       }
-
       let needToAmount = '0'
       if (targetMakerPool) {
         needToAmount =
@@ -1944,7 +1943,7 @@ export class ServiceMakerPull {
             makerPull.txExt = <any>{ ext: tx.extra['ext'] }
             makerPull.userReceive = tx.extra['ext']
           } else if (['4', '44'].includes(marketItem.toChain.id)) {
-            makerPull.userReceive = makerPull.txExt?.value
+            makerPull.userReceive = fix0xPadStartAddress(String(makerPull.txExt?.value), 66)
           }
           //
         }
