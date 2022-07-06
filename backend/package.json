@@ -43,7 +43,7 @@
     "node-cache": "^5.1.2",
     "node-fetch": "^1.7.3",
     "node-schedule": "^2.1.0",
-    "orbiter-chaincore": "^1.1.0",
+    "orbiter-chaincore": "^1.1.2",
     "reflect-metadata": "^0.1.13",
     "semver": "^7.3.5",
     "starknet": "^3.15.4",

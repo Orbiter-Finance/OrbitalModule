@@ -347,6 +347,7 @@ export async function confirmTransactionSendMoneyBack(
         case '11':
         case '511':
           userAddress = tx.extra['ext'].replace('0x02', '0x')
+          break
         case '4':
         case '44':
           userAddress = tx.extra['ext'].replace('0x03', '0x')
