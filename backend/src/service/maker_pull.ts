@@ -1646,6 +1646,7 @@ export class ServiceMakerPull {
           gasCurrency: 'ETH',
           gasAmount: '0',
           tx_status,
+          symbol: transaction.symbol,
         })
         promiseMethods.push(async () => {
           await savePull(makerPull)
