@@ -96,19 +96,21 @@ export async function getMakerPulls(
 
   // QueryBuilder
   const queryBuilder = repositoryMakerPull().createQueryBuilder(ALIAS_MP)
-  const makerAddressList = [makerAddress];
-    const starknetL1MapL2 = process.env.NODE_ENV == 'development'
-      ? makerConfig.starknetL1MapL2['georli-alpha']
-      : makerConfig.starknetL1MapL2['mainnet-alpha']
-      if (starknetL1MapL2[makerAddress.toLowerCase()]) {
-        makerAddressList.push(starknetL1MapL2[makerAddress.toLowerCase()])
-      }
+  // const makerAddressList = [makerAddress];
+  let l2MakerAddress = '';
+  const starknetL1MapL2 = process.env.NODE_ENV == 'development'
+    ? makerConfig.starknetL1MapL2['georli-alpha']
+    : makerConfig.starknetL1MapL2['mainnet-alpha']
+    if (starknetL1MapL2[makerAddress.toLowerCase()]) {
+      l2MakerAddress = starknetL1MapL2[makerAddress.toLowerCase()]
+    }
   // select subQuery
   const selectSubSelect = repositoryMakerNode()
     .createQueryBuilder(ALIAS_MN)
-    .select('toTx')
-    // .where(`${ALIAS_MN}.makerAddress = :makerAddress`, { makerAddress  })
-    .where(`${ALIAS_MN}.makerAddress in(:makerAddress)`, { makerAddress:makerAddressList })
+    .select(!fromOrToMaker ? 'toTx' : 'formTx')
+    // .select('toTx')
+    .where(`(${ALIAS_MN}.makerAddress  = :makerAddress or ${ALIAS_MN}.makerAddress  = '${l2MakerAddress}')`, 
+    { makerAddress })
     .limit(1)
   if (fromOrToMaker) {
     selectSubSelect.andWhere(`${ALIAS_MN}.toTx=${ALIAS_MP}.txHash`)
@@ -118,15 +120,15 @@ export async function getMakerPulls(
   queryBuilder.addSelect('(' + selectSubSelect.getQuery() + ')', 'target_tx')
 
   // where
-  queryBuilder.where(`${ALIAS_MP}.makerAddress in(:makerAddress)`, {
-    makerAddress: makerAddressList,
+  queryBuilder.where(`${ALIAS_MP}.makerAddress = :makerAddress`, {
+    makerAddress,
   })
   // queryBuilder.andWhere(`${ALIAS_MP}.amount_flag != '0'`)
   queryBuilder.andWhere(
     `${ALIAS_MP}.${
       fromOrToMaker ? 'fromAddress' : 'toAddress'
-    } in (:makerAddress)`,
-    { makerAddress:makerAddressList }
+    } = :makerAddress`,
+    { makerAddress }
   )
 
   // conversion、query
@@ -146,7 +148,7 @@ export async function getMakerPulls(
   // order by
   queryBuilder.addOrderBy(`${ALIAS_MP}.txTime`, 'DESC')
 
-  const list = await queryBuilder.getRawMany()
+  const list = await queryBuilder.limit(2000).getRawMany()
   // clear
   const newList: any[] = []
   for (const item of list) {
@@ -1901,7 +1903,7 @@ export class ServiceMakerPull {
           txBlock: String(tx.blockNumber),
           txHash: tx.hash,
           txExt: this.getTxExtFromInput(String(tx.input)),
-          txTime:new Date(Number(tx.timestamp) * 1000),
+          txTime: new Date(Number(tx.timestamp) * 1000),
           gasCurrency: tx.feeToken,
           gasAmount: String(tx.fee),
           tx_status: 'rejected',
@@ -1951,7 +1953,10 @@ export class ServiceMakerPull {
             makerPull.txExt = <any>{ ext: tx.extra['ext'] }
             makerPull.userReceive = tx.extra['ext']
           } else if (['4', '44'].includes(marketItem.toChain.id)) {
-            makerPull.userReceive = fix0xPadStartAddress(String(makerPull.txExt?.value), 66)
+            makerPull.userReceive = fix0xPadStartAddress(
+              String(makerPull.txExt?.value),
+              66
+            )
           }
           //
         }
@@ -1963,7 +1968,11 @@ export class ServiceMakerPull {
           }
         })
       } catch (error) {
-        accessLogger.error(`Processing matching tx error: `,JSON.stringify(tx), error.message)
+        accessLogger.error(
+          `Processing matching tx error: `,
+          JSON.stringify(tx),
+          error.message
+        )
       }
     }
 
