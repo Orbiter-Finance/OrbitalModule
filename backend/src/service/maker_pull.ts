@@ -96,12 +96,19 @@ export async function getMakerPulls(
 
   // QueryBuilder
   const queryBuilder = repositoryMakerPull().createQueryBuilder(ALIAS_MP)
-
+  const makerAddressList = [makerAddress];
+    const starknetL1MapL2 = process.env.NODE_ENV == 'development'
+      ? makerConfig.starknetL1MapL2['georli-alpha']
+      : makerConfig.starknetL1MapL2['mainnet-alpha']
+      if (starknetL1MapL2[makerAddress.toLowerCase()]) {
+        makerAddressList.push(starknetL1MapL2[makerAddress.toLowerCase()])
+      }
   // select subQuery
   const selectSubSelect = repositoryMakerNode()
     .createQueryBuilder(ALIAS_MN)
     .select('toTx')
-    .where(`${ALIAS_MN}.makerAddress = :makerAddress`, { makerAddress })
+    // .where(`${ALIAS_MN}.makerAddress = :makerAddress`, { makerAddress  })
+    .where(`${ALIAS_MN}.makerAddress in(:makerAddress)`, { makerAddress:makerAddressList })
     .limit(1)
   if (fromOrToMaker) {
     selectSubSelect.andWhere(`${ALIAS_MN}.toTx=${ALIAS_MP}.txHash`)
@@ -111,15 +118,15 @@ export async function getMakerPulls(
   queryBuilder.addSelect('(' + selectSubSelect.getQuery() + ')', 'target_tx')
 
   // where
-  queryBuilder.where(`${ALIAS_MP}.makerAddress = :makerAddress`, {
-    makerAddress,
+  queryBuilder.where(`${ALIAS_MP}.makerAddress in(:makerAddress)`, {
+    makerAddress: makerAddressList,
   })
   // queryBuilder.andWhere(`${ALIAS_MP}.amount_flag != '0'`)
   queryBuilder.andWhere(
     `${ALIAS_MP}.${
       fromOrToMaker ? 'fromAddress' : 'toAddress'
-    } = :makerAddress`,
-    { makerAddress }
+    } in (:makerAddress)`,
+    { makerAddress:makerAddressList }
   )
 
   // conversion、query
